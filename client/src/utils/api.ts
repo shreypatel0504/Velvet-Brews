@@ -1,4 +1,3 @@
-import { getApiHost } from './socket';
 
 export const getApiUrl = (endpoint: string) => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;

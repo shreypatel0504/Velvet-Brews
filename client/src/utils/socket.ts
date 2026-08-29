@@ -9,15 +9,17 @@ export const getApiHost = () => {
 
 export const getSocketURL = () => {
   if (typeof window !== 'undefined') {
+    if (import.meta.env.VITE_SOCKET_URL) {
+      return import.meta.env.VITE_SOCKET_URL;
+    }
     // If running in development on localhost
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return `http://${window.location.hostname}:5000`;
     }
-    // If running over HTTPS in production
-    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-    return `${protocol}//${window.location.host}`;
+    // Live Render backend
+    return 'https://velvet-brews.onrender.com';
   }
-  return 'http://localhost:5000';
+  return 'https://velvet-brews.onrender.com';
 };
 
 export const socket = io(getSocketURL(), {
