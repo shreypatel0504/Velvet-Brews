@@ -75,9 +75,9 @@ export const Navbar = () => {
       />
 
       <nav 
-        className="sticky top-0 z-50 w-full border-b border-amber-950/5 bg-[var(--color-cafe-surface)]/90 backdrop-blur-md shadow-xs pt-10 sm:pt-0 gpu-layer"
+        className="sticky top-0 z-40 w-full border-b border-stone-200/80 bg-white/95 backdrop-blur-md shadow-xs"
       >
-        <div className="mx-auto flex h-20 sm:h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 pb-2 sm:pb-0">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-2 group">
               <motion.div
