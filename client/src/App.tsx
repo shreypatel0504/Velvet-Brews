@@ -44,6 +44,7 @@ function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
+            className="min-h-screen w-full relative"
           >
             <Toaster position="top-center" />
             <OfferPopupModal />

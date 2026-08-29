@@ -136,10 +136,9 @@ export const LandingPage = () => {
               <motion.div
                 initial={{ opacity: 0, x: 100, scale: 0.9 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
-                whileTap={{ scale: 1.03 }}
                 whileHover={{ scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 90, damping: 15, delay: 0.25 }}
-                className="relative mx-auto w-full max-w-lg lg:max-w-none cursor-pointer"
+                className="relative mx-auto w-full max-w-lg lg:max-w-none"
               >
                 <div className="relative overflow-hidden rounded-3xl shadow-2xl group border-4 border-amber-900/10 hover:border-[var(--color-cafe-primary)]/40 transition-all duration-500 cursor-pointer">
                   {/* ✅ High Quality Cafe Barista & Ambiance Video */}
@@ -204,10 +203,9 @@ export const LandingPage = () => {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.5, y: 30 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  whileTap={{ scale: 1.08 }}
                   whileHover={{ scale: 1.06 }}
                   transition={{ type: "spring", stiffness: 140, damping: 12, delay: 0.6 }}
-                  className="absolute -bottom-5 left-3 sm:-bottom-6 sm:-left-6 rounded-2xl bg-white/95 backdrop-blur-md p-3 sm:p-4 shadow-2xl border border-amber-100 z-20 cursor-pointer"
+                  className="absolute -bottom-5 left-3 sm:-bottom-6 sm:-left-6 rounded-2xl bg-white/95 backdrop-blur-md p-3 sm:p-4 shadow-2xl border border-amber-100 z-20"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-amber-50 text-amber-600 shadow-inner shrink-0">
@@ -245,11 +243,10 @@ export const LandingPage = () => {
                   key={idx}
                   initial={{ opacity: 0, y: 45, scale: 0.95 }}
                   whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  whileTap={{ scale: 0.95 }}
                   whileHover={{ y: -8 }}
                   viewport={{ once: true, amount: 0.05 }}
                   transition={{ type: "spring", stiffness: 120, damping: 14, delay: idx * 0.08 }}
-                  className="group relative overflow-hidden rounded-3xl bg-amber-950/10 border border-amber-900/10 shadow-md hover:shadow-2xl transition-all duration-500 h-[320px] sm:h-[360px] lg:h-[390px] flex flex-col justify-end cursor-pointer"
+                  className="group relative overflow-hidden rounded-3xl bg-amber-950/10 border border-amber-900/10 shadow-md hover:shadow-2xl transition-all duration-500 h-[320px] sm:h-[360px] lg:h-[390px] flex flex-col justify-end"
                 >
                   {/* Image with zoom effect */}
                   <img
@@ -293,11 +290,10 @@ export const LandingPage = () => {
               <motion.div
                 initial={{ opacity: 0, x: -50, scale: 0.95 }}
                 whileInView={{ opacity: 1, x: 0, scale: 1 }}
-                whileTap={{ scale: 0.97 }}
                 whileHover={{ scale: 1.01 }}
                 viewport={{ once: true, amount: 0.05 }}
                 transition={{ type: "spring", stiffness: 100, damping: 15 }}
-                className="relative cursor-pointer"
+                className="relative"
               >
                 <div className="relative overflow-hidden rounded-3xl shadow-2xl border-4 border-white aspect-[4/3] cursor-pointer group">
                   <video
@@ -327,11 +323,10 @@ export const LandingPage = () => {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.5, y: 20 }}
                   whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                  whileTap={{ scale: 1.08 }}
                   whileHover={{ scale: 1.06 }}
                   viewport={{ once: true, amount: 0.05 }}
                   transition={{ type: "spring", stiffness: 140, damping: 12, delay: 0.2 }}
-                  className="absolute -bottom-5 right-3 sm:-bottom-6 sm:-right-6 rounded-2xl bg-white/95 backdrop-blur-md p-3 sm:p-4 shadow-xl border border-gray-100 z-20 cursor-pointer"
+                  className="absolute -bottom-5 right-3 sm:-bottom-6 sm:-right-6 rounded-2xl bg-white/95 backdrop-blur-md p-3 sm:p-4 shadow-xl border border-gray-100 z-20"
                 >
                   <div className="flex items-center gap-2.5 sm:gap-3">
                     <span className="text-xl sm:text-2xl">🍕</span>
@@ -380,10 +375,9 @@ export const LandingPage = () => {
                       key={feature.title}
                       initial={{ opacity: 0, x: 40 }}
                       whileInView={{ opacity: 1, x: 0 }}
-                      whileTap={{ scale: 0.98 }}
                       viewport={{ once: true, amount: 0.05 }}
                       transition={{ type: "spring", stiffness: 110, damping: 14, delay: idx * 0.1 }}
-                      className="flex items-start gap-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+                      className="flex items-start gap-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
                     >
                       <div className="rounded-xl bg-[var(--color-cafe-primary)]/10 p-3 ring-1 ring-[var(--color-cafe-primary)]/20 shrink-0">
                         <feature.icon className="h-5 w-5 text-[var(--color-cafe-primary)]" />
@@ -466,7 +460,6 @@ export const LandingPage = () => {
                   key={idx}
                   initial={{ opacity: 0, y: 35, scale: 0.95 }}
                   whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  whileTap={{ scale: 0.96 }}
                   viewport={{ once: true, amount: 0.05 }}
                   transition={{ type: "spring", stiffness: 110, damping: 14, delay: idx * 0.1 }}
                 >
