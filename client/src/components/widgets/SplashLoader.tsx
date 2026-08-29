@@ -12,23 +12,23 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({ onComplete }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsFinished(true);
-      if (onComplete) onComplete();
-    }, 4000);
+    }, 2000);
 
     return () => clearTimeout(timer);
-  }, [onComplete]);
+  }, []);
 
   const handleDismiss = () => {
     setIsFinished(true);
-    if (onComplete) onComplete();
   };
 
   return (
-    <AnimatePresence>
+    <AnimatePresence onExitComplete={onComplete}>
       {!isFinished && (
         <div
           onClick={handleDismiss}
-          className="fixed inset-0 z-[9999] overflow-hidden select-none cursor-pointer flex items-center justify-center"
+          className={`fixed inset-0 z-[9999] overflow-hidden select-none flex items-center justify-center ${
+            isFinished ? 'pointer-events-none' : 'cursor-pointer pointer-events-auto'
+          }`}
         >
           {/* Left Door */}
           <motion.div
