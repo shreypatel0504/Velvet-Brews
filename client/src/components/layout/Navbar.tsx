@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { Coffee, Menu, X, User, LogOut, ShoppingBag, Star, Calendar, Sparkles, MapPin, Bell } from "lucide-react";
+import { Coffee, Menu, X, User, LogOut, ShoppingBag, Star, Calendar, Sparkles, MapPin, Bell, Flame } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -124,20 +124,23 @@ export const Navbar = () => {
           <Link to="/contact" className="text-xs lg:text-sm font-medium text-[var(--color-cafe-text-secondary)] hover:text-[var(--color-cafe-primary)] transition-all hover:scale-105">Contact</Link>
 
           <div className="flex items-center gap-2 lg:gap-3">
-            {/* Notification Bell Button */}
+            {/* Dedicated Offers & Deals Button */}
             <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={handleOpenNotifications}
-              className="relative p-2 lg:p-2.5 text-gray-700 hover:text-[var(--color-cafe-primary)] hover:bg-amber-100/50 rounded-full transition-colors cursor-pointer"
-              title="Offers & Notifications"
+              className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-900 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 rounded-full transition-all shadow-2xs cursor-pointer"
+              title="Special Deals & Live Offers"
             >
-              <Bell className="h-5 w-5" />
-              {hasUnreadNotification && (
-                <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+              <Flame className="h-4 w-4 text-amber-600 fill-amber-500" />
+              <span>Offers</span>
+              {hasUnreadNotification ? (
+                <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-600"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-600"></span>
                 </span>
+              ) : (
+                <span className="text-[9px] bg-amber-500/20 text-amber-800 px-1 rounded-full font-extrabold">NEW</span>
               )}
             </motion.button>
 
@@ -198,19 +201,17 @@ export const Navbar = () => {
 
         {/* Mobile Nav Toggle & Icons */}
         <div className="flex items-center gap-1 sm:gap-2 md:hidden">
-          {/* Mobile Bell Button */}
+          {/* Mobile Offers Button */}
           <motion.button
             whileTap={{ scale: 0.85 }}
             onClick={handleOpenNotifications}
-            className="relative p-2 text-gray-700 hover:text-[var(--color-cafe-primary)] rounded-full transition-colors cursor-pointer"
-            title="Offers & Notifications"
+            className="relative flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-amber-900 bg-amber-500/15 border border-amber-500/30 rounded-full cursor-pointer"
+            title="Offers & Deals"
           >
-            <Bell className="h-5 w-5" />
+            <Flame className="h-4 w-4 fill-amber-500 text-amber-600" />
+            <span className="text-[11px]">Offers</span>
             {hasUnreadNotification && (
-              <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-600"></span>
-              </span>
+              <span className="h-2 w-2 rounded-full bg-amber-600 animate-ping" />
             )}
           </motion.button>
 

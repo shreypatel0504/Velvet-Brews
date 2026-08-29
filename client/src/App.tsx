@@ -24,7 +24,7 @@ import {
 import { AdminLayout } from '@/components/layout';
 
 import { Toaster } from 'react-hot-toast';
-import { CartDrawer, MobileBottomNav, WhatsAppWidget, SplashLoader, InstallPWABanner, OfferPopupModal, NotificationCenterModal } from '@/components';
+import { CartDrawer, MobileBottomNav, WhatsAppWidget, SplashLoader, InstallPWABanner, NotificationCenterModal } from '@/components';
 import { useCartStore } from '@/store/useCartStore';
 import './index.css';
 
@@ -39,7 +39,6 @@ function App() {
       )}
       <div className="min-h-screen w-full relative">
         <Toaster position="top-center" />
-        <OfferPopupModal />
         <NotificationCenterModal
           isOpen={isNotificationOpen}
           onClose={() => setNotificationOpen(false)}
