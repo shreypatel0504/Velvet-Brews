@@ -24,7 +24,7 @@ import {
 import { AdminLayout } from '@/components/layout';
 
 import { Toaster } from 'react-hot-toast';
-import { CartDrawer, MobileBottomNav, WhatsAppWidget, SplashLoader, InstallPWABanner, NotificationCenterModal } from '@/components';
+import { CartDrawer, MobileBottomNav, WhatsAppWidget, SplashLoader, NotificationCenterModal } from '@/components';
 import { useCartStore } from '@/store/useCartStore';
 import './index.css';
 
@@ -47,7 +47,6 @@ function App() {
         <CartDrawer />
         <MobileBottomNav />
         <WhatsAppWidget />
-        <InstallPWABanner />
         <Routes>
           {/* Customer Routes */}
           <Route path="/" element={<LandingPage />} />
