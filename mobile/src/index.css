@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-dark: #120d0a;
+    --bg-card: rgba(28, 20, 16, 0.85);
+    --accent-amber: #d97706;
+    --accent-gold: #f59e0b;
+    --text-cream: #fef3c7;
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: #120d0a;
+  color: #fef3c7;
+  font-family: 'Inter', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* 120 FPS GPU Isolation — Composited Layer */
+.gpu-layer {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform;
+}
+
+/* CSS Containment for 120 FPS scrolling lists */
+.contain-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 112px;
+}
+
+.contain-h-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 160px 0;
+}
+
+/* Glassmorphism — Reduced blur for high refresh-rate GPUs */
+.glass-panel {
+  background: rgba(30, 22, 17, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(217, 119, 6, 0.15);
+  transform: translate3d(0, 0, 0);
+}
+
+.glass-nav {
+  background: rgba(18, 13, 10, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(217, 119, 6, 0.2);
+  transform: translate3d(0, 0, 0);
+}
+
+.glass-card {
+  background: linear-gradient(135deg, rgba(38, 27, 21, 0.88) 0%, rgba(24, 17, 13, 0.95) 100%);
+  border: 1px solid rgba(217, 119, 6, 0.2);
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.3);
+  transform: translate3d(0, 0, 0);
+}
+
+/* Custom Scrollbar for categories horizontal scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Mobile Safe Areas */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
+}
+
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top), 1rem);
+}
+
+/* Shimmer & Glow Effects — GPU-composited only */
+.glow-amber {
+  box-shadow: 0 0 20px rgba(217, 119, 6, 0.3);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #fef3c7 0%, #f59e0b 50%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Smooth touch transitions */
+.touch-btn {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+}
+.touch-btn:active {
+  transform: scale(0.96) translate3d(0, 0, 0);
+}
+

@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cafe-primary: #8C6239;
+  --color-cafe-secondary: #D4A373;
+  --color-cafe-dark: #2C1810;
+  --color-cafe-background: #F8FAFC;
+  --color-cafe-surface: rgba(255, 255, 255, 0.95);
+  --color-cafe-text-primary: #0F172A;
+  --color-cafe-text-secondary: #475569;
+  --color-cafe-accent: #10B981;
+  --color-cafe-danger: #EF4444;
+
+  --font-heading: "Playfair Display", serif;
+  --font-body: "Inter", sans-serif;
+  
+  --shadow-cafe-card: 0 10px 40px -10px rgba(15, 23, 42, 0.08);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background-color: var(--color-cafe-background);
+    color: var(--color-cafe-text-primary);
+    font-family: var(--font-body);
+    -webkit-overflow-scrolling: touch;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+}
+
+@layer utilities {
+  .gpu-layer {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: transform;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(140, 98, 57, 0.25);
+    border-radius: 9999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(140, 98, 57, 0.5);
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Print thermal receipt styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable-receipt, .printable-receipt * {
+    visibility: visible;
+  }
+  .printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 12px;
+    background: #fff;
+    color: #000;
+    font-family: monospace;
+    font-size: 12px;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+

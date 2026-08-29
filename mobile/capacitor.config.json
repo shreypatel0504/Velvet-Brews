@@ -1,0 +1,8 @@
+{
+  "appId": "com.velvetbrews.app",
+  "appName": "Velvet Brews",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

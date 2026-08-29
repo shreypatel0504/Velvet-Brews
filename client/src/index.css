@@ -1,0 +1,240 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cafe-primary: #8C6239;
+  --color-cafe-secondary: #D4A373;
+  --color-cafe-background: #FAFAFA;
+  --color-cafe-surface: rgba(255, 255, 255, 0.88);
+  --color-cafe-text-primary: #2C1E16;
+  --color-cafe-text-secondary: #6B5749;
+  --color-cafe-accent: #606C38;
+  --color-cafe-danger: #BC4749;
+
+  --font-heading: "Playfair Display", serif;
+  --font-body: "Inter", sans-serif;
+  
+  --shadow-cafe-card: 0 10px 40px -10px rgba(140, 98, 57, 0.12);
+  --shadow-cafe-glow: 0 0 25px rgba(212, 163, 115, 0.45);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--color-cafe-background);
+    color: var(--color-cafe-text-primary);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+    touch-action: manipulation;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Fixed Ambient Background Gradient Mesh with Isolated GPU Layer */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+    backface-visibility: hidden;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(28,100%,74%,0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(33,50%,45%,0.12) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, hsla(28,60%,60%,0.08) 0px, transparent 50%);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+
+  /* Custom Touch & Mobile Optimization + Pointer Cursors */
+  button, a, input, select, img, video, [role="button"] {
+    touch-action: manipulation;
+    cursor: pointer;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.03);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-cafe-secondary);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-cafe-primary);
+  }
+}
+
+/* 120 FPS GPU-Accelerated Keyframe Animations */
+@keyframes float-slow {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+  50% { transform: translate3d(0, -10px, 0) scale(1.03) rotate(1.5deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; transform: scale(1) translate3d(0, 0, 0); }
+  50% { opacity: 0.9; transform: scale(1.04) translate3d(0, 0, 0); }
+}
+
+@keyframes steam-rise {
+  0% {
+    transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate3d(0, -18px, 0) scaleX(1.3) scaleY(1.2);
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate3d(0, -36px, 0) scaleX(1.6) scaleY(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer-gold {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes badge-bounce {
+  0%, 100% { transform: scale(1) translate3d(0, 0, 0); }
+  50% { transform: scale(1.15) translate3d(0, 0, 0); }
+}
+
+@keyframes spin-slow {
+  0% { transform: rotate(0deg) translate3d(0, 0, 0); }
+  100% { transform: rotate(360deg) translate3d(0, 0, 0); }
+}
+
+.animate-float {
+  animation: float-slow 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
+
+.animate-steam-1 {
+  animation: steam-rise 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
+
+.animate-steam-2 {
+  animation: steam-rise 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.6s;
+  will-change: transform, opacity;
+}
+
+.animate-steam-3 {
+  animation: steam-rise 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite 1.2s;
+  will-change: transform, opacity;
+}
+
+.animate-badge-bounce {
+  animation: badge-bounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  will-change: transform;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+  will-change: transform;
+}
+
+.text-gold-shimmer {
+  background: linear-gradient(90deg, #D4A373 0%, #FFF5EA 50%, #8C6239 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shimmer-gold 4s linear infinite;
+  will-change: background-position;
+}
+
+@layer utilities {
+  /* High-Performance 120 FPS GPU Surface */
+  .gpu-layer {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: transform;
+  }
+
+  /* CSS Containment for 120 FPS Long Scrolling Lists */
+  .contain-item {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 160px;
+  }
+
+  .contain-card-desktop {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 380px;
+  }
+
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    transform: translate3d(0, 0, 0);
+  }
+
+  .glass-dark {
+    background: rgba(44, 30, 22, 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(212, 163, 115, 0.25);
+    transform: translate3d(0, 0, 0);
+  }
+  
+  .text-gradient {
+    background: linear-gradient(135deg, var(--color-cafe-primary) 0%, var(--color-cafe-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .card-hover-effect {
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+  }
+  .card-hover-effect:hover {
+    transform: translate3d(0, -6px, 0);
+    box-shadow: var(--shadow-cafe-card);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(140, 98, 57, 0.3);
+    border-radius: 10px;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
