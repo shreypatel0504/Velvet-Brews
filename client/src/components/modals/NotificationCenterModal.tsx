@@ -150,7 +150,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-end p-0 sm:p-4 overscroll-none">
+        <div className="fixed inset-0 z-[100] flex items-start justify-end p-0 sm:p-4 overscroll-none">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
