@@ -12,7 +12,8 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
       token = req.headers.authorization.split(' ')[1];
-      const decoded: any = jwt.verify(token, process.env.JWT_SECRET as string);
+      const jwtSecret = process.env.JWT_SECRET || 'supersecret_velvet_brews_jwt_key_2026_production_secret';
+      const decoded: any = jwt.verify(token, jwtSecret);
 
       const user = await User.findById(decoded.id).select('-password');
       if (!user) {
