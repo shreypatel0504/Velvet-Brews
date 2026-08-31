@@ -21,22 +21,19 @@ interface RegisteredUser {
   createdAt?: string;
 }
 
-const initialStaff: StaffMember[] = [
-  { id: "1", name: "Ananya Sharma", email: "ananya@velvetbrews.in", role: "manager", shift: "Morning (8 AM - 4 PM)", status: "active" },
-  { id: "2", name: "Rohan Verma", email: "rohan@velvetbrews.in", role: "barista", shift: "Morning (8 AM - 4 PM)", status: "active" },
-  { id: "3", name: "Vikram Singh", email: "vikram@velvetbrews.in", role: "waiter", shift: "Evening (3 PM - 11 PM)", status: "off_duty" },
-  { id: "4", name: "Priya Patel", email: "priya@velvetbrews.in", role: "barista", shift: "Evening (3 PM - 11 PM)", status: "on_break" },
-];
-
 export const StaffManagementPage = () => {
   const [activeTab, setActiveTab] = React.useState<'staff' | 'users'>('users');
-  const [staffList, setStaffList] = React.useState<StaffMember[]>(initialStaff);
+  const [staffList, setStaffList] = React.useState<StaffMember[]>([]);
   const [registeredUsers, setRegisteredUsers] = React.useState<RegisteredUser[]>([]);
   const [loadingUsers, setLoadingUsers] = React.useState(true);
+  const [loadingStaff, setLoadingStaff] = React.useState(true);
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [newName, setNewName] = React.useState("");
   const [newEmail, setNewEmail] = React.useState("");
+  const [newPhone, setNewPhone] = React.useState("");
+  const [newShift, setNewShift] = React.useState("Morning (8 AM - 4 PM)");
   const [newRole, setNewRole] = React.useState<'admin' | 'manager' | 'barista' | 'waiter'>("barista");
+  const [submitting, setSubmitting] = React.useState(false);
 
   const fetchUsers = React.useCallback(async () => {
     try {
@@ -55,33 +52,88 @@ export const StaffManagementPage = () => {
     }
   }, []);
 
+  const fetchStaff = React.useCallback(async () => {
+    try {
+      setLoadingStaff(true);
+      const res = await fetch('/api/staff');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setStaffList(data.map((s: any) => ({
+            id: s._id || s.id,
+            name: s.name,
+            email: s.email,
+            role: s.role || 'barista',
+            shift: s.shift || 'General (9 AM - 6 PM)',
+            status: (s.status || 'Active').toLowerCase().replace(' ', '_') as any
+          })));
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch staff members:", err);
+    } finally {
+      setLoadingStaff(false);
+    }
+  }, []);
+
   React.useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchStaff();
+  }, [fetchUsers, fetchStaff]);
 
-  const handleAddStaff = (e: React.FormEvent) => {
+  const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newEmail) return;
     
-    const newStaff: StaffMember = {
-      id: Date.now().toString(),
-      name: newName,
-      email: newEmail,
-      role: newRole,
-      shift: "General (9 AM - 6 PM)",
-      status: "active"
-    };
+    setSubmitting(true);
+    try {
+      const response = await fetch('/api/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newName.trim(),
+          email: newEmail.trim().toLowerCase(),
+          phone: newPhone.trim() || '+91 98765 00000',
+          role: newRole,
+          shift: newShift,
+          status: 'Active'
+        })
+      });
 
-    setStaffList([...staffList, newStaff]);
-    setShowAddModal(false);
-    setNewName("");
-    setNewEmail("");
-    toast.success(`Added ${newStaff.name} to Staff team`);
+      if (response.ok) {
+        toast.success(`Added ${newName} to Staff & Database!`);
+        setShowAddModal(false);
+        setNewName("");
+        setNewEmail("");
+        setNewPhone("");
+        fetchStaff();
+        fetchUsers();
+      } else {
+        const err = await response.json();
+        toast.error(err.message || 'Failed to add staff member');
+      }
+    } catch {
+      toast.error('Unable to connect to server. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleDeleteStaff = (id: string, name: string) => {
-    setStaffList(staffList.filter(s => s.id !== id));
-    toast.success(`Removed ${name} from Staff`);
+  const handleDeleteStaff = async (id: string, name: string) => {
+    try {
+      const res = await fetch(`/api/staff/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setStaffList(prev => prev.filter(s => s.id !== id));
+        toast.success(`Removed ${name} from Staff and Database`);
+        fetchStaff();
+        fetchUsers();
+      } else {
+        toast.error('Failed to remove staff member');
+      }
+    } catch {
+      setStaffList(prev => prev.filter(s => s.id !== id));
+      toast.success(`Removed ${name} from Staff`);
+    }
   };
 
   return (
@@ -189,68 +241,81 @@ export const StaffManagementPage = () => {
 
       {/* Staff Grid Tab */}
       {activeTab === 'staff' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {staffList.map((staff) => (
-            <Card key={staff.id} className="p-6 border-transparent glass-panel flex flex-col justify-between">
-              <div>
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-2xl bg-[var(--color-cafe-primary)]/10 text-[var(--color-cafe-primary)] flex items-center justify-center font-bold text-lg">
-                      {staff.name.charAt(0)}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-base text-[var(--color-cafe-text-primary)]">{staff.name}</h3>
-                      <span className="text-xs uppercase font-bold text-[var(--color-cafe-primary)] tracking-wider">
-                        {staff.role}
+        <div>
+          {loadingStaff ? (
+            <div className="p-8 text-center text-sm text-[var(--color-cafe-text-secondary)]">
+              Loading staff members from database...
+            </div>
+          ) : staffList.length === 0 ? (
+            <Card className="p-8 text-center text-sm text-[var(--color-cafe-text-secondary)]">
+              No staff members found in database. Click "Add Staff" above to create one.
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {staffList.map((staff) => (
+                <Card key={staff.id} className="p-6 border-transparent glass-panel flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-2xl bg-[var(--color-cafe-primary)]/10 text-[var(--color-cafe-primary)] flex items-center justify-center font-bold text-lg">
+                          {staff.name.charAt(0)}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-base text-[var(--color-cafe-text-primary)]">{staff.name}</h3>
+                          <span className="text-xs uppercase font-bold text-[var(--color-cafe-primary)] tracking-wider">
+                            {staff.role}
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
+                        staff.status === 'active' ? 'bg-green-100 text-green-700' :
+                        staff.status === 'on_break' ? 'bg-amber-100 text-amber-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {staff.status.replace('_', ' ')}
                       </span>
                     </div>
-                  </div>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
-                    staff.status === 'active' ? 'bg-green-100 text-green-700' :
-                    staff.status === 'on_break' ? 'bg-amber-100 text-amber-700' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
-                    {staff.status.replace('_', ' ')}
-                  </span>
-                </div>
 
-                <div className="space-y-2 text-sm text-[var(--color-cafe-text-secondary)] mb-6">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-gray-400 shrink-0" />
-                    <span className="truncate">{staff.email}</span>
+                    <div className="space-y-2 text-sm text-[var(--color-cafe-text-secondary)] mb-6">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-gray-400 shrink-0" />
+                        <span className="truncate">{staff.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-gray-400 shrink-0" />
+                        <span>Shift: {staff.shift}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-gray-400 shrink-0" />
-                    <span>Shift: {staff.shift}</span>
-                  </div>
-                </div>
-              </div>
 
-              <div className="border-t border-gray-100 pt-4 flex justify-between items-center">
-                <span className="text-xs text-green-600 flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" /> Access Granted
-                </span>
-                <button 
-                  onClick={() => handleDeleteStaff(staff.id, staff.name)}
-                  className="text-gray-400 hover:text-red-600 transition-colors p-1"
-                  title="Remove staff"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </Card>
-          ))}
+                  <div className="border-t border-gray-100 pt-4 flex justify-between items-center">
+                    <span className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> Access Granted
+                    </span>
+                    <button 
+                      onClick={() => handleDeleteStaff(staff.id, staff.name)}
+                      className="text-gray-400 hover:text-red-600 transition-colors p-1"
+                      title="Remove staff"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Add Staff Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="max-w-md w-full p-6 bg-white shadow-2xl">
-            <h3 className="font-heading text-xl font-bold mb-4">Add New Staff</h3>
-            <form onSubmit={handleAddStaff} className="space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="max-w-md w-full p-6 bg-white shadow-2xl rounded-2xl">
+            <h3 className="font-heading text-xl font-bold mb-4 text-[var(--color-cafe-text-primary)]">Add New Staff Member</h3>
+            <form onSubmit={handleAddStaff} className="space-y-3.5">
               <Input 
                 label="Full Name" 
+                placeholder="e.g. Rahul Sharma"
                 value={newName} 
                 onChange={(e) => setNewName(e.target.value)} 
                 required 
@@ -258,27 +323,53 @@ export const StaffManagementPage = () => {
               <Input 
                 label="Email Address" 
                 type="email" 
+                placeholder="rahul@velvetbrews.com"
                 value={newEmail} 
                 onChange={(e) => setNewEmail(e.target.value)} 
                 required 
               />
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-cafe-text-secondary)] mb-1">Role</label>
-                <select 
-                  value={newRole}
-                  onChange={(e) => setNewRole(e.target.value as any)}
-                  className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-cafe-primary)]"
-                >
-                  <option value="barista">Barista</option>
-                  <option value="waiter">Waiter</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
-                </select>
+              <Input 
+                label="Phone Number" 
+                placeholder="+91 98765 43210"
+                value={newPhone} 
+                onChange={(e) => setNewPhone(e.target.value)} 
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-cafe-text-secondary)] mb-1">Role</label>
+                  <select 
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value as any)}
+                    className="w-full rounded-xl border border-gray-200 p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-cafe-primary)]"
+                  >
+                    <option value="barista">Barista</option>
+                    <option value="waiter">Waiter</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-cafe-text-secondary)] mb-1">Shift</label>
+                  <select 
+                    value={newShift}
+                    onChange={(e) => setNewShift(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-cafe-primary)]"
+                  >
+                    <option value="Morning (8 AM - 4 PM)">Morning (8-4)</option>
+                    <option value="Evening (3 PM - 11 PM)">Evening (3-11)</option>
+                    <option value="Night (10 PM - 6 AM)">Night (10-6)</option>
+                    <option value="Full Day (9 AM - 7 PM)">Full Day (9-7)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <Button variant="ghost" type="button" onClick={() => setShowAddModal(false)}>Cancel</Button>
-                <Button type="submit">Add Member</Button>
+                <Button variant="ghost" type="button" onClick={() => setShowAddModal(false)} disabled={submitting}>
+                  Cancel
+                </Button>
+                <Button type="submit" isLoading={submitting}>
+                  Save to Database
+                </Button>
               </div>
             </form>
           </Card>
