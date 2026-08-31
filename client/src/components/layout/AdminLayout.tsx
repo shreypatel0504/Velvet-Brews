@@ -8,23 +8,25 @@ import { motion, AnimatePresence } from "framer-motion";
 export const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, login, logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   const role = user?.role?.toLowerCase();
   const isAdmin = Boolean(user && (role === 'admin' || role === 'owner'));
 
+  React.useEffect(() => {
+    if (!isAdmin) {
+      toast.error("Admin access required. Please log in with admin credentials.");
+      navigate("/login");
+    }
+  }, [isAdmin, navigate]);
+
   const [notifications, setNotifications] = React.useState([
     { id: 1, text: "New Order #1026 received from Table 3", time: "2 mins ago", unread: true },
     { id: 2, text: "Table 5 requested bill", time: "10 mins ago", unread: true },
     { id: 3, text: "Low stock alert: Blueberry Muffin", time: "1 hour ago", unread: false },
   ]);
-
-  const handleAdminQuickUnlock = () => {
-    login({ id: 'USR1001', name: 'Admin Owner', email: 'admin@cafe.com', role: 'admin' }, 'admin-jwt-token-master');
-    toast.success("Admin access unlocked!");
-  };
 
   const handleLogout = () => {
     logout();
@@ -33,59 +35,7 @@ export const AdminLayout = () => {
   };
 
   if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-[var(--color-cafe-background)] flex items-center justify-center p-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full bg-white rounded-3xl p-8 border border-amber-900/10 shadow-2xl text-center space-y-6"
-        >
-          <div className="mx-auto h-16 w-16 rounded-2xl bg-amber-500/15 text-[var(--color-cafe-primary)] flex items-center justify-center shadow-inner">
-            <Coffee className="h-8 w-8" />
-          </div>
-
-          <div>
-            <h2 className="font-heading text-2xl font-bold text-[var(--color-cafe-text-primary)]">
-              Admin Portal Access
-            </h2>
-            <p className="text-xs text-[var(--color-cafe-text-secondary)] mt-1.5">
-              This section is reserved for store managers and owners.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/70 text-xs text-amber-950 text-left space-y-1">
-            <p className="font-bold flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-amber-700" /> Default Admin Credentials:
-            </p>
-            <p className="font-mono text-gray-700">Email: admin@cafe.com</p>
-            <p className="font-mono text-gray-700">Password: password123</p>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              onClick={handleAdminQuickUnlock}
-              className="w-full py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-800 hover:to-amber-950 shadow-lg shadow-amber-900/20 transition-all flex items-center justify-center gap-2"
-            >
-              👑 Unlock Admin Dashboard (1-Click)
-            </button>
-
-            <Link
-              to="/login"
-              className="block w-full py-3 rounded-xl text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
-            >
-              Go to Standard Sign In Page
-            </Link>
-
-            <Link
-              to="/"
-              className="block text-xs text-[var(--color-cafe-text-secondary)] hover:text-[var(--color-cafe-primary)]"
-            >
-              ← Back to Customer Website
-            </Link>
-          </div>
-        </motion.div>
-      </div>
-    );
+    return null;
   }
 
   const markAllRead = () => {

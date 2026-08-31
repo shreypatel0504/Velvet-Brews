@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Coffee, ArrowLeft, UserCheck, UserX, AlertCircle, Sparkles, X } from "lucide-react";
+import { Coffee, ArrowLeft, UserX, AlertCircle, Sparkles, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -23,7 +23,7 @@ export const LoginPage = () => {
   const [isNotFoundModalOpen, setIsNotFoundModalOpen] = React.useState(false);
   const [unregisteredEmail, setUnregisteredEmail] = React.useState("");
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<LoginFormValues>({
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
 
@@ -66,7 +66,7 @@ export const LoginPage = () => {
       // If password is wrong
       toast.error(result.message || 'Incorrect email or password. Please try again.');
     } catch {
-      // If backend is offline but admin logs in
+      // If backend is offline but admin logs in manually with correct password
       if (isAdmin && (data.password === 'password123' || data.password.length >= 6)) {
         login({ id: 'USR1001', name: 'Admin User', email: emailLower, role: 'admin' }, 'admin-jwt-token-master');
         toast.success('Welcome back, Admin!');
@@ -86,17 +86,6 @@ export const LoginPage = () => {
   const handleGoToRegister = () => {
     setIsNotFoundModalOpen(false);
     navigate('/register', { state: { email: unregisteredEmail } });
-  };
-
-  const handleDirectAdminLogin = () => {
-    login({ id: 'USR1001', name: 'Admin Owner', email: 'admin@cafe.com', role: 'admin' }, 'admin-jwt-token-master');
-    toast.success('Logged in as Administrator!');
-    navigate('/admin');
-  };
-
-  const handleFillDemo = (email: string, pass: string) => {
-    setValue('email', email, { shouldValidate: true });
-    setValue('password', pass, { shouldValidate: true });
   };
 
   return (
@@ -234,36 +223,6 @@ export const LoginPage = () => {
               <Button type="submit" isLoading={loading} className="w-full h-12 text-base shadow-lg shadow-[var(--color-cafe-primary)]/20">
                 Sign In
               </Button>
-
-              {/* 1-Click Admin Access Card */}
-              <div className="p-4 rounded-xl glass-panel bg-amber-500/10 border border-amber-500/30 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-bold text-amber-950">
-                    <UserCheck className="h-4 w-4 text-[var(--color-cafe-primary)]" />
-                    <span>Admin Portal Access</span>
-                  </div>
-                  <span className="text-[10px] bg-amber-600 text-white px-2 py-0.5 rounded-full font-bold">1-Click</span>
-                </div>
-                <p className="text-[11px] text-[var(--color-cafe-text-secondary)]">
-                  Quick access for store manager: <strong>admin@cafe.com</strong>
-                </p>
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleDirectAdminLogin}
-                    className="flex-1 py-2 px-3 text-xs font-bold text-white bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-800 hover:to-amber-950 rounded-lg shadow-sm transition-all"
-                  >
-                    👑 1-Click Admin Login
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleFillDemo('admin@cafe.com', 'password123')}
-                    className="py-2 px-3 text-xs font-semibold text-amber-950 bg-white/80 hover:bg-white border border-amber-200 rounded-lg transition-colors"
-                  >
-                    Fill Form
-                  </button>
-                </div>
-              </div>
             </form>
           </div>
         </motion.div>
