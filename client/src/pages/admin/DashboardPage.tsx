@@ -1,6 +1,6 @@
 import React from "react";
 import { Card } from "@/components/ui";
-import { ArrowUpRight, DollarSign, ShoppingBag, Users, Star, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { ArrowUpRight, IndianRupee, ShoppingBag, Users, Star, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { socket } from "@/utils/socket";
 import { sharedSync } from "@/utils/sharedSync";
@@ -162,7 +162,7 @@ export const DashboardPage = () => {
       {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { title: "Total Revenue", value: `₹${totalRevenue.toLocaleString('en-IN')}`, icon: DollarSign, trend: `${orders.length} orders` },
+          { title: "Total Revenue", value: `₹${totalRevenue.toLocaleString('en-IN')}`, icon: IndianRupee, trend: `${orders.length} orders` },
           { title: "Pending / Active Orders", value: pendingOrders, icon: ShoppingBag, trend: `${orders.length} total` },
           { title: "Table Reservations", value: todayReservations, icon: Users, trend: "Bookings" },
           { title: "Avg Customer Rating", value: avgRating, icon: Star, trend: `${reviews.length} reviews` },
@@ -188,7 +188,7 @@ export const DashboardPage = () => {
       {/* Chart & Recent Orders */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="col-span-1 lg:col-span-2 p-6 border-transparent bg-white shadow-xs">
-          <h3 className="font-heading text-lg font-semibold text-[var(--color-cafe-text-primary)] mb-6">Revenue Overview</h3>
+          <h3 className="font-heading text-lg font-semibold text-[var(--color-cafe-text-primary)] mb-6">Revenue Overview (INR)</h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -200,9 +200,16 @@ export const DashboardPage = () => {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#785E4F'}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#785E4F'}} dx={-10} />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill: '#785E4F'}} 
+                  tickFormatter={(val) => `₹${val.toLocaleString('en-IN')}`}
+                  dx={-10} 
+                />
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 40px -10px rgba(140,98,57,0.1)' }}
+                  formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Revenue']}
                   itemStyle={{ color: 'var(--color-cafe-primary)' }}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="var(--color-cafe-primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />

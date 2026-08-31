@@ -1,5 +1,5 @@
 import React from "react";
-import { DollarSign, ShoppingBag, Users, TrendingUp, Clock, ArrowUpRight, Coffee, Star, RefreshCw, Wifi, WifiOff, Eye, MessageSquare, Mail, Activity, CheckCircle2, XCircle, ChevronRight, Zap } from "lucide-react";
+import { IndianRupee, ShoppingBag, Users, TrendingUp, Clock, ArrowUpRight, Coffee, Star, RefreshCw, Wifi, WifiOff, Eye, MessageSquare, Mail, Activity, CheckCircle2, XCircle, ChevronRight, Zap } from "lucide-react";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { socket } from "../utils/socket";
@@ -186,7 +186,7 @@ export const DashboardPage = () => {
   const pendingContacts = contacts.filter(c => c.status === 'pending').length;
 
   const statCards = [
-    { title: "Total Revenue", value: `₹${totalRevenue.toLocaleString('en-IN')}`, change: `${orders.length} orders`, icon: DollarSign, color: "text-emerald-600 bg-emerald-50" },
+    { title: "Total Revenue", value: `₹${totalRevenue.toLocaleString('en-IN')}`, change: `${orders.length} orders`, icon: IndianRupee, color: "text-emerald-600 bg-emerald-50" },
     { title: "Pending Orders", value: pendingOrders, change: `${orders.length} total`, icon: ShoppingBag, color: "text-amber-600 bg-amber-50" },
     { title: "Reservations Today", value: todayReservations, change: `${reservations.length} total`, icon: Users, color: "text-blue-600 bg-blue-50" },
     { title: "Avg Customer Rating", value: avgRating, change: `${reviews.length} reviews`, icon: Star, color: "text-purple-600 bg-purple-50" },
