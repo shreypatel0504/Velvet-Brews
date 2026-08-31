@@ -21,6 +21,7 @@ export const RegisterPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const prefilledEmail = (location.state as any)?.email || "";
+  const targetFrom = (location.state as any)?.from?.pathname || '/menu';
 
   const login = useAuthStore((state) => state.login);
   const [loading, setLoading] = React.useState(false);
@@ -49,7 +50,7 @@ export const RegisterPage = () => {
       if (response.ok && result.token) {
         login({ id: result._id, name: result.name, email: result.email, role: result.role || 'customer' }, result.token);
         toast.success(`Account created successfully! Welcome, ${result.name}`);
-        navigate('/menu');
+        navigate(targetFrom);
       } else {
         toast.error(result.message || 'Registration failed. Please check your details.');
       }

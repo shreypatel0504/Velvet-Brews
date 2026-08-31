@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Coffee, ArrowLeft, UserX, AlertCircle, Sparkles, X } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -18,10 +18,13 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const login = useAuthStore((state) => state.login);
   const [loading, setLoading] = React.useState(false);
   const [isNotFoundModalOpen, setIsNotFoundModalOpen] = React.useState(false);
   const [unregisteredEmail, setUnregisteredEmail] = React.useState("");
+
+  const targetFrom = (location.state as any)?.from?.pathname || '/menu';
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -50,7 +53,7 @@ export const LoginPage = () => {
         if (userRole === 'admin' || userRole === 'owner') {
           navigate('/admin');
         } else {
-          navigate('/menu');
+          navigate(targetFrom);
         }
         return;
       }
@@ -85,7 +88,7 @@ export const LoginPage = () => {
 
   const handleGoToRegister = () => {
     setIsNotFoundModalOpen(false);
-    navigate('/register', { state: { email: unregisteredEmail } });
+    navigate('/register', { state: { email: unregisteredEmail, from: (location.state as any)?.from } });
   };
 
   return (

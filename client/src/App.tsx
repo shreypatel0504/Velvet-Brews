@@ -24,7 +24,7 @@ import {
 import { AdminLayout } from '@/components/layout';
 
 import { Toaster } from 'react-hot-toast';
-import { CartDrawer, MobileBottomNav, WhatsAppWidget, SplashLoader, NotificationCenterModal } from '@/components';
+import { CartDrawer, MobileBottomNav, WhatsAppWidget, SplashLoader, NotificationCenterModal, RequireAuth } from '@/components';
 import { useCartStore } from '@/store/useCartStore';
 import { prefetchMenu } from '@/utils/menuCache';
 import './index.css';
@@ -68,18 +68,48 @@ function App() {
         <MobileBottomNav />
         <WhatsAppWidget />
         <Routes>
-          {/* Customer Routes */}
+          {/* Public Customer Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/ambiance" element={<AmbiancePage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
-          <Route path="/reservation" element={<TableReservationPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/menu" element={<MenuPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/track/:id" element={<OrderTrackingPage />} />
+
+          {/* Protected Customer Routes (Requires Signup / Login) */}
+          <Route 
+            path="/menu" 
+            element={
+              <RequireAuth message="Please log in or sign up to view our menu & place orders!">
+                <MenuPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/reservation" 
+            element={
+              <RequireAuth message="Please log in or sign up to book a table reservation!">
+                <TableReservationPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/checkout" 
+            element={
+              <RequireAuth message="Please log in or sign up to complete your order!">
+                <CheckoutPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/track/:id" 
+            element={
+              <RequireAuth message="Please log in or sign up to track your order!">
+                <OrderTrackingPage />
+              </RequireAuth>
+            } 
+          />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
