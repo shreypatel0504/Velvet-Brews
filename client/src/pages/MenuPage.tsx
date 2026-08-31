@@ -1,14 +1,14 @@
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, ShoppingBag } from "lucide-react";
+import { Search, ShoppingBag, UtensilsCrossed } from "lucide-react";
 import toast from "react-hot-toast";
 import { Navbar, Footer } from "@/components/layout";
 import { Button, Card } from "@/components/ui";
 import { ItemCustomizationModal } from "@/components/modals";
 import { useCartStore } from "@/store/useCartStore";
 import { socket } from "@/utils/socket";
-import { FALLBACK_MENU } from "@/data/fallbackMenu";
+import { getCachedMenu, setCachedMenu, prefetchMenu } from "@/utils/menuCache";
 import type { MenuItem } from "@/types";
 
 const MENU_CATEGORIES = ["All", "Coffee", "Tea", "Pizza", "Sandwich", "Pastries", "Food"] as const;
@@ -34,10 +34,16 @@ interface ItemCardProps {
 const MenuItemCard = React.memo(({ item, quantity, onAddToCart, onUpdateQuantity }: ItemCardProps) => {
   const itemId = item._id || item.id || "";
   const fallbackImg = CATEGORY_FALLBACK_IMAGES[item.category || "Coffee"] || CATEGORY_FALLBACK_IMAGES.Coffee;
+  const [imgLoaded, setImgLoaded] = React.useState(false);
 
   const handleImgError = React.useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     (e.target as HTMLImageElement).src = fallbackImg;
+    setImgLoaded(true);
   }, [fallbackImg]);
+
+  const handleImgLoad = React.useCallback(() => {
+    setImgLoaded(true);
+  }, []);
 
   return (
     <div className="w-full">
@@ -72,14 +78,18 @@ const MenuItemCard = React.memo(({ item, quantity, onAddToCart, onUpdateQuantity
 
         {/* Right Image + Swiggy Floating ADD Button */}
         <div className="relative shrink-0 w-28 flex flex-col items-center pb-2">
-          <div className="h-28 w-28 rounded-2xl overflow-hidden bg-stone-100 shadow-xs border border-stone-200/80 cursor-pointer group">
+          <div className="h-28 w-28 rounded-2xl overflow-hidden bg-stone-100 shadow-xs border border-stone-200/80 cursor-pointer group relative">
+            {!imgLoaded && (
+              <div className="absolute inset-0 bg-stone-200 animate-pulse rounded-2xl" />
+            )}
             <img 
               src={item.imageUrl || fallbackImg} 
               alt={item.name}
               loading="lazy"
               decoding="async"
+              onLoad={handleImgLoad}
               onError={handleImgError}
-              className="w-full h-full object-cover transition-transform duration-300 cursor-pointer group-hover:scale-105"
+              className={`w-full h-full object-cover transition-all duration-300 cursor-pointer group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           </div>
 
@@ -116,13 +126,17 @@ const MenuItemCard = React.memo(({ item, quantity, onAddToCart, onUpdateQuantity
       {/* DESKTOP / TABLET CARD (Hidden on Mobile) */}
       <Card className="hidden sm:flex h-full flex-col group cursor-pointer bg-white border border-stone-200/80 hover:border-[var(--color-cafe-primary)]/40 hover:shadow-lg transition-all duration-250">
         <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl bg-stone-100 cursor-pointer">
+          {!imgLoaded && (
+            <div className="absolute inset-0 bg-stone-200 animate-pulse" />
+          )}
           <img 
             src={item.imageUrl || fallbackImg} 
             alt={item.name} 
             loading="lazy"
             decoding="async"
+            onLoad={handleImgLoad}
             onError={handleImgError}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 cursor-pointer"
+            className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-105 cursor-pointer ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors cursor-pointer" />
         </div>
@@ -154,8 +168,9 @@ export const MenuPage = () => {
   const [searchQuery, setSearchQuery] = React.useState("");
   const deferredQuery = React.useDeferredValue(searchQuery);
 
-  const [items, setItems] = React.useState<MenuItem[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+  // Synchronous 0ms initialization from local cache or fallback
+  const [items, setItems] = React.useState<MenuItem[]>(() => getCachedMenu());
+  const [isLoading, setIsLoading] = React.useState(false);
   const [customizingItem, setCustomizingItem] = React.useState<{
     id: string;
     name: string;
@@ -199,19 +214,16 @@ export const MenuPage = () => {
     }
   }, [searchParams, setTableNumber, setOrderType]);
 
+  // Non-blocking background revalidation with timeout
   const fetchMenu = React.useCallback(async () => {
     try {
-      const response = await fetch('/api/menu');
-      if (!response.ok) throw new Error("API response error");
-      const data = await response.json();
-      if (Array.isArray(data) && data.length > 0) {
-        setItems(data);
-      } else {
-        setItems(FALLBACK_MENU);
+      const freshItems = await prefetchMenu();
+      if (Array.isArray(freshItems) && freshItems.length > 0) {
+        setItems(freshItems);
+        setCachedMenu(freshItems);
       }
     } catch (error) {
-      console.warn("Using fallback menu data:", error);
-      setItems(FALLBACK_MENU);
+      console.debug("Silent background menu sync:", error);
     } finally {
       setIsLoading(false);
     }
@@ -311,9 +323,29 @@ export const MenuPage = () => {
         </div>
 
         {/* Menu Items Grid */}
-        {isLoading ? (
+        {isLoading && items.length === 0 ? (
           <div className="flex justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--color-cafe-primary)]"></div>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-3xl border border-stone-200/80 shadow-xs p-8">
+            <div className="h-16 w-16 mx-auto mb-4 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-700">
+              <UtensilsCrossed className="h-8 w-8" />
+            </div>
+            <h3 className="font-heading text-xl font-bold text-stone-900 mb-2">No dishes found</h3>
+            <p className="text-sm text-stone-500 max-w-md mx-auto mb-6">
+              We couldn't find any items matching &quot;{searchQuery}&quot; in the {activeCategory} category.
+            </p>
+            <Button
+              onClick={() => {
+                setSearchQuery("");
+                setActiveCategory("All");
+              }}
+              variant="outline"
+              className="rounded-xl font-semibold"
+            >
+              Reset Filters
+            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
@@ -370,3 +402,4 @@ export const MenuPage = () => {
     </div>
   );
 };
+

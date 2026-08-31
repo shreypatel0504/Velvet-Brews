@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import {
   LandingPage,
@@ -26,16 +26,36 @@ import { AdminLayout } from '@/components/layout';
 import { Toaster } from 'react-hot-toast';
 import { CartDrawer, MobileBottomNav, WhatsAppWidget, SplashLoader, NotificationCenterModal } from '@/components';
 import { useCartStore } from '@/store/useCartStore';
+import { prefetchMenu } from '@/utils/menuCache';
 import './index.css';
 
 function App() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    try {
+      return !sessionStorage.getItem('velvet_splash_shown');
+    } catch {
+      return false;
+    }
+  });
+
   const { isNotificationOpen, setNotificationOpen, activeOffer } = useCartStore();
+
+  // Background pre-warm backend and prefetch menu on website visit
+  useEffect(() => {
+    prefetchMenu().catch(() => {});
+  }, []);
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+    try {
+      sessionStorage.setItem('velvet_splash_shown', 'true');
+    } catch {}
+  };
 
   return (
     <BrowserRouter>
       {showSplash && (
-        <SplashLoader onComplete={() => setShowSplash(false)} />
+        <SplashLoader onComplete={handleSplashComplete} />
       )}
       <div className="min-h-screen w-full relative">
         <Toaster position="top-center" />

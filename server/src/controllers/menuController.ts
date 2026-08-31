@@ -68,7 +68,9 @@ const defaultDishes = [
 
 export const getMenuItems = async (req: Request, res: Response) => {
   try {
-    const menuItems = await MenuItem.find({});
+    // Enable Edge CDN and browser caching (60s fresh, 120s CDN, 300s SWR)
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
+    const menuItems = await MenuItem.find({}).maxTimeMS(3000);
     if (Array.isArray(menuItems) && menuItems.length > 0) {
       res.json(menuItems);
     } else {

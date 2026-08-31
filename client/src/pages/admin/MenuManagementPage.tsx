@@ -3,29 +3,23 @@ import { Plus, Edit2, Trash2, Search, RefreshCw } from "lucide-react";
 import { Card, Button } from "@/components/ui";
 import toast from "react-hot-toast";
 
-import { FALLBACK_MENU } from "@/data/fallbackMenu";
-
+import { getCachedMenu, setCachedMenu, prefetchMenu } from "@/utils/menuCache";
 import type { MenuItem } from "@/types";
 
 export const MenuManagementPage = () => {
-  const [items, setItems] = React.useState<MenuItem[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [items, setItems] = React.useState<MenuItem[]>(() => getCachedMenu());
+  const [loading, setLoading] = React.useState(false);
   const [search, setSearch] = React.useState("");
 
   const fetchMenu = async () => {
-    setLoading(true);
     try {
-      const res = await fetch('/api/menu');
-      if (!res.ok) throw new Error("Fetch error");
-      const data = await res.json();
+      const data = await prefetchMenu();
       if (Array.isArray(data) && data.length > 0) {
         setItems(data);
-      } else {
-        setItems(FALLBACK_MENU);
+        setCachedMenu(data);
       }
     } catch (err) {
-      console.warn("Using fallback menu data:", err);
-      setItems(FALLBACK_MENU);
+      console.debug("Using cached menu data in admin:", err);
     } finally {
       setLoading(false);
     }
