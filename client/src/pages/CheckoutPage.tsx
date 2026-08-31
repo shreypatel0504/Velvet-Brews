@@ -5,6 +5,7 @@ import { ArrowLeft, CreditCard, CheckCircle2, QrCode, Smartphone, Building2, Shi
 import { Button, Input, Card } from "@/components/ui";
 import { Navbar } from "@/components/layout";
 import { useCartStore, useLoyaltyStore } from "@/store";
+import { useAuthStore } from "@/store/useAuthStore";
 import { socket } from "@/utils/socket";
 import { sharedSync } from "@/utils/sharedSync";
 import { trackWebsiteActivity } from "@/utils/activityTracker";
@@ -14,13 +15,21 @@ export type PaymentMethodType = 'gpay' | 'phonepe' | 'paytm' | 'bhim_upi' | 'qr_
 
 export const CheckoutPage = () => {
   const cart = useCartStore();
+  const authUser = useAuthStore((s) => s.user);
   const navigate = useNavigate();
 
   // Form State
-  const [customerName, setCustomerName] = React.useState("Rahul Sharma");
-  const [email, setEmail] = React.useState("rahul@example.com");
+  const [customerName, setCustomerName] = React.useState(authUser?.name || "Rahul Sharma");
+  const [email, setEmail] = React.useState(authUser?.email || "rahul@example.com");
   const [phone, setPhone] = React.useState("+91 99784 21542");
   const [deliveryAddressInput, setDeliveryAddressInput] = React.useState(cart.deliveryAddress || "Vesu Main Road, Surat");
+
+  React.useEffect(() => {
+    if (authUser) {
+      if (authUser.name) setCustomerName(authUser.name);
+      if (authUser.email) setEmail(authUser.email);
+    }
+  }, [authUser]);
 
   // Payment Selection State (Defaults to Cash on Delivery for Delivery orders)
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethodType>(

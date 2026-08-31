@@ -43,6 +43,17 @@ app.get('/', (req, res) => {
   res.send('Velvet Brews Cafe Management API is running.');
 });
 
+app.get('/api/health', (req, res) => {
+  const isConnected = require('mongoose').connection.readyState === 1;
+  res.json({
+    status: 'ok',
+    database: isConnected ? 'connected' : 'disconnected',
+    mongoHost: isConnected ? require('mongoose').connection.host : null,
+    mongoDbName: isConnected ? require('mongoose').connection.name : null,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Active offer in memory
 let currentActiveOffer: any = initialActiveOffer;
 

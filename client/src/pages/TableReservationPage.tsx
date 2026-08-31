@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Calendar, Clock, MapPin, Sparkles, CheckCircle2, Coffee, Heart, PartyPopper, Briefcase, ArrowLeft, Download, User } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
 import { Card, Button, Input } from "@/components/ui";
+import { useAuthStore } from "@/store/useAuthStore";
 import { socket } from "@/utils/socket";
 import { sharedSync } from "@/utils/sharedSync";
 import { trackWebsiteActivity } from "@/utils/activityTracker";
@@ -90,6 +91,7 @@ const OCCASIONS = [
 ];
 
 export const TableReservationPage = () => {
+  const authUser = useAuthStore((s) => s.user);
   const [selectedTable, setSelectedTable] = React.useState<SeatingOption>(SEATING_AREAS[2]);
   const [guestsCount, setGuestsCount] = React.useState("2");
   const [reservationDate, setReservationDate] = React.useState(
@@ -100,9 +102,16 @@ export const TableReservationPage = () => {
   const [specialRequest, setSpecialRequest] = React.useState("");
 
   // Customer Contact Info
-  const [customerName, setCustomerName] = React.useState("");
-  const [email, setEmail] = React.useState("");
+  const [customerName, setCustomerName] = React.useState(authUser?.name || "");
+  const [email, setEmail] = React.useState(authUser?.email || "");
   const [phone, setPhone] = React.useState("");
+
+  React.useEffect(() => {
+    if (authUser) {
+      if (authUser.name) setCustomerName(authUser.name);
+      if (authUser.email) setEmail(authUser.email);
+    }
+  }, [authUser]);
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [confirmedReservation, setConfirmedReservation] = React.useState<any>(null);

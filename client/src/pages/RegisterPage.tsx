@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Coffee, ArrowLeft } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -19,11 +19,17 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefilledEmail = (location.state as any)?.email || "";
+
   const login = useAuthStore((state) => state.login);
   const [loading, setLoading] = React.useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
+    defaultValues: {
+      email: prefilledEmail,
+    }
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
@@ -32,25 +38,23 @@ export const RegisterPage = () => {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          name: data.name.trim(),
+          email: data.email.trim().toLowerCase(),
+          password: data.password,
+        }),
       });
       const result = await response.json();
 
       if (response.ok && result.token) {
         login({ id: result._id, name: result.name, email: result.email, role: result.role || 'customer' }, result.token);
-        toast.success(`Account created! Welcome, ${result.name}`);
+        toast.success(`Account created successfully! Welcome, ${result.name}`);
         navigate('/menu');
       } else {
-        // Fallback for demo registration
-        login({ name: data.name, email: data.email, role: 'customer' }, 'demo-token');
-        toast.success(`Welcome to Velvet Brews, ${data.name}!`);
-        navigate('/menu');
+        toast.error(result.message || 'Registration failed. Please check your details.');
       }
     } catch {
-      // Fallback register logic
-      login({ name: data.name, email: data.email, role: 'customer' }, 'demo-token');
-      toast.success(`Account created for ${data.name}!`);
-      navigate('/menu');
+      toast.error('Unable to reach backend server. Please make sure the server is running on port 5000.');
     } finally {
       setLoading(false);
     }

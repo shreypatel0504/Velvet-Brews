@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "npm run dev:client",
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"blue.bold,green.bold\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:all": "concurrently -n \"SERVER,CLIENT,ADMIN\" -c \"blue.bold,green.bold,magenta.bold\" \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:admin\"",
     "dev:client": "npm --prefix client run dev",
     "dev:mobile": "npm --prefix mobile run dev",
     "dev:admin": "npm --prefix admin run dev",
@@ -11,5 +12,8 @@
     "start": "npm run dev",
     "build": "npm --prefix client run build && npm --prefix admin run build",
     "seed": "npm --prefix server run seed"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
   }
 }

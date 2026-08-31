@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { Coffee, Menu, X, User, LogOut, ShoppingBag, Star, Calendar, Sparkles, MapPin, Bell, Flame } from "lucide-react";
+import { Coffee, Menu, X, User, LogOut, ShoppingBag, Star, Calendar, Sparkles, MapPin, Bell, Flame, Shield } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -170,21 +170,33 @@ export const Navbar = () => {
             </motion.button>
 
             {user ? (
-              <div className="flex items-center gap-2 lg:gap-3 bg-[var(--color-cafe-primary)]/10 px-2.5 lg:px-3 py-1.5 rounded-full border border-[var(--color-cafe-primary)]/20 shadow-2xs">
-                <div className="h-7 w-7 lg:h-8 lg:w-8 rounded-full bg-[var(--color-cafe-primary)] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                  {user.name ? user.name.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
+              <div className="flex items-center gap-2">
+                {user.role === 'admin' && (
+                  <Link
+                    to="/admin"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-900 bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/40 rounded-full transition-all shadow-xs"
+                    title="Open Admin Management Portal"
+                  >
+                    <Shield className="h-3.5 w-3.5 text-amber-700" />
+                    <span>Admin Panel</span>
+                  </Link>
+                )}
+                <div className="flex items-center gap-2 lg:gap-3 bg-[var(--color-cafe-primary)]/10 px-2.5 lg:px-3 py-1.5 rounded-full border border-[var(--color-cafe-primary)]/20 shadow-2xs">
+                  <div className="h-7 w-7 lg:h-8 lg:w-8 rounded-full bg-[var(--color-cafe-primary)] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                    {user.name ? user.name.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
+                  </div>
+                  <div className="text-xs text-left hidden sm:block">
+                    <p className="font-bold text-[var(--color-cafe-text-primary)] leading-tight truncate max-w-[90px] lg:max-w-[130px]">{user.name}</p>
+                    <p className="text-[var(--color-cafe-text-secondary)] capitalize text-[10px]">{user.role || 'Customer'}</p>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    title="Logout"
+                    className="ml-1 text-gray-500 hover:text-red-600 transition-colors p-1"
+                  >
+                    <LogOut className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                  </button>
                 </div>
-                <div className="text-xs text-left hidden sm:block">
-                  <p className="font-bold text-[var(--color-cafe-text-primary)] leading-tight truncate max-w-[90px] lg:max-w-[130px]">{user.name}</p>
-                  <p className="text-[var(--color-cafe-text-secondary)] capitalize text-[10px]">{user.role || 'Customer'}</p>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  title="Logout"
-                  className="ml-1 text-gray-500 hover:text-red-600 transition-colors p-1"
-                >
-                  <LogOut className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
-                </button>
               </div>
             ) : (
               <>
@@ -292,20 +304,31 @@ export const Navbar = () => {
 
               <div className="flex flex-col space-y-3 pt-4 border-t border-gray-100">
                 {user ? (
-                  <div className="flex items-center justify-between p-3 bg-amber-50/70 rounded-xl border border-amber-200/50">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-[var(--color-cafe-primary)] text-white flex items-center justify-center font-bold">
-                        {user.name.charAt(0).toUpperCase()}
+                  <>
+                    {user.role === 'admin' && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setIsOpen(false)}
+                        className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-amber-600 text-white font-bold text-sm shadow-md"
+                      >
+                        <Shield className="h-4 w-4" /> Go to Admin Portal
+                      </Link>
+                    )}
+                    <div className="flex items-center justify-between p-3 bg-amber-50/70 rounded-xl border border-amber-200/50">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-[var(--color-cafe-primary)] text-white flex items-center justify-center font-bold">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-[var(--color-cafe-text-primary)]">{user.name}</p>
+                          <p className="text-xs text-gray-500">{user.email}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-sm text-[var(--color-cafe-text-primary)]">{user.name}</p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
-                      </div>
+                      <Button variant="ghost" onClick={handleLogout} className="text-red-600 text-xs">
+                        Logout
+                      </Button>
                     </div>
-                    <Button variant="ghost" onClick={handleLogout} className="text-red-600 text-xs">
-                      Logout
-                    </Button>
-                  </div>
+                  </>
                 ) : (
                   <>
                     <Link to="/login"><Button variant="outline" className="w-full">Log in</Button></Link>

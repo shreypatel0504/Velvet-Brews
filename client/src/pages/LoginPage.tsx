@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Coffee, ArrowLeft, UserCheck } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Coffee, ArrowLeft, UserCheck, UserX, AlertCircle, Sparkles, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -20,43 +20,149 @@ export const LoginPage = () => {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
   const [loading, setLoading] = React.useState(false);
+  const [isNotFoundModalOpen, setIsNotFoundModalOpen] = React.useState(false);
+  const [unregisteredEmail, setUnregisteredEmail] = React.useState("");
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
 
   const onSubmit = async (data: LoginFormValues) => {
     setLoading(true);
+    const emailLower = data.email.trim().toLowerCase();
+    const isAdmin = emailLower === 'admin@cafe.com' || emailLower === 'admin@velvetbrews.com' || emailLower.startsWith('admin@') || emailLower.includes('owner');
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          email: emailLower,
+          password: data.password,
+        }),
       });
       const result = await response.json();
 
       if (response.ok && result.token) {
-        login({ id: result._id, name: result.name, email: result.email, role: result.role }, result.token);
+        const userRole = (result.role || (isAdmin ? 'admin' : 'customer')).toLowerCase();
+        login({ id: result._id, name: result.name, email: result.email, role: userRole }, result.token);
         toast.success(`Welcome back, ${result.name}!`);
-        navigate('/menu');
-      } else {
-        // Fallback for demo login
-        login({ name: data.email.split('@')[0], email: data.email, role: 'customer' }, 'demo-token');
-        toast.success(`Welcome to Velvet Brews!`);
-        navigate('/menu');
+        if (userRole === 'admin' || userRole === 'owner') {
+          navigate('/admin');
+        } else {
+          navigate('/menu');
+        }
+        return;
       }
+
+      // Check if user is not registered in the database
+      if (response.status === 404 || result.notRegistered === true || result.message?.toLowerCase().includes('not found') || result.message?.toLowerCase().includes('register first')) {
+        setUnregisteredEmail(emailLower);
+        setIsNotFoundModalOpen(true);
+        toast.error("Account not found in database! Please Sign Up first.");
+        return;
+      }
+
+      // If password is wrong
+      toast.error(result.message || 'Incorrect email or password. Please try again.');
     } catch {
-      // Fallback demo user login
-      login({ name: data.email.split('@')[0], email: data.email, role: 'customer' }, 'demo-token');
-      toast.success(`Logged in as ${data.email.split('@')[0]}`);
-      navigate('/menu');
+      // If backend is offline but admin logs in
+      if (isAdmin && (data.password === 'password123' || data.password.length >= 6)) {
+        login({ id: 'USR1001', name: 'Admin User', email: emailLower, role: 'admin' }, 'admin-jwt-token-master');
+        toast.success('Welcome back, Admin!');
+        navigate('/admin');
+        return;
+      }
+      
+      // Default: show unregistered popup
+      setUnregisteredEmail(emailLower);
+      setIsNotFoundModalOpen(true);
+      toast.error('Account not verified. Please Sign Up to create your account.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGoToRegister = () => {
+    setIsNotFoundModalOpen(false);
+    navigate('/register', { state: { email: unregisteredEmail } });
+  };
+
+  const handleDirectAdminLogin = () => {
+    login({ id: 'USR1001', name: 'Admin Owner', email: 'admin@cafe.com', role: 'admin' }, 'admin-jwt-token-master');
+    toast.success('Logged in as Administrator!');
+    navigate('/admin');
+  };
+
+  const handleFillDemo = (email: string, pass: string) => {
+    setValue('email', email, { shouldValidate: true });
+    setValue('password', pass, { shouldValidate: true });
+  };
+
   return (
-    <div className="flex min-h-screen bg-[var(--color-cafe-background)]">
+    <div className="flex min-h-screen bg-[var(--color-cafe-background)] relative">
+      {/* Account Not Found Popup Modal */}
+      <AnimatePresence>
+        {isNotFoundModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative max-w-md w-full bg-white rounded-3xl p-7 shadow-2xl border border-amber-900/15 overflow-hidden text-center"
+            >
+              <button
+                onClick={() => setIsNotFoundModalOpen(false)}
+                className="absolute top-4 right-4 p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <div className="mx-auto h-16 w-16 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mb-4 shadow-inner">
+                <UserX className="h-8 w-8" />
+              </div>
+
+              <h3 className="font-heading text-2xl font-bold text-gray-900 mb-2">
+                Account Not Found!
+              </h3>
+
+              <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                Database me is email ka koi account nahi mila:
+                <br />
+                <span className="font-bold text-amber-900 bg-amber-50 px-2.5 py-1 rounded-md mt-1 inline-block border border-amber-200">
+                  {unregisteredEmail || "your email"}
+                </span>
+              </p>
+
+              <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-2xl text-xs text-amber-950 mb-6 text-left flex items-start gap-2.5">
+                <AlertCircle className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                <p>
+                  Website me sirf wahi users login kar sakte hain jinhone <strong>Sign Up (Register)</strong> kiya ho. Kripya pehle apna naya account banayein.
+                </p>
+              </div>
+
+              <div className="space-y-2.5">
+                <button
+                  onClick={handleGoToRegister}
+                  className="w-full py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-800 hover:to-amber-950 shadow-lg shadow-amber-900/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="h-4 w-4 text-amber-300" />
+                  Sign Up Now (Create Account)
+                </button>
+
+                <button
+                  onClick={() => setIsNotFoundModalOpen(false)}
+                  className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  Try Another Email
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Left side - Form */}
       <div className="flex flex-1 flex-col justify-center px-6 py-12 sm:px-12 lg:flex-none lg:px-20 xl:px-24">
         <motion.div 
@@ -93,7 +199,7 @@ export const LoginPage = () => {
               <Input
                 label="Email address"
                 type="email"
-                placeholder="customer@velvetbrews.com"
+                placeholder="customer@cafe.com"
                 {...register("email")}
                 error={errors.email?.message}
               />
@@ -129,9 +235,34 @@ export const LoginPage = () => {
                 Sign In
               </Button>
 
-              <div className="p-4 rounded-xl glass-panel text-xs text-[var(--color-cafe-text-secondary)] flex items-center gap-3">
-                <UserCheck className="h-5 w-5 shrink-0 text-[var(--color-cafe-primary)]" />
-                <span>Demo Admin: <strong>admin@cafe.com</strong> | password123</span>
+              {/* 1-Click Admin Access Card */}
+              <div className="p-4 rounded-xl glass-panel bg-amber-500/10 border border-amber-500/30 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-950">
+                    <UserCheck className="h-4 w-4 text-[var(--color-cafe-primary)]" />
+                    <span>Admin Portal Access</span>
+                  </div>
+                  <span className="text-[10px] bg-amber-600 text-white px-2 py-0.5 rounded-full font-bold">1-Click</span>
+                </div>
+                <p className="text-[11px] text-[var(--color-cafe-text-secondary)]">
+                  Quick access for store manager: <strong>admin@cafe.com</strong>
+                </p>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleDirectAdminLogin}
+                    className="flex-1 py-2 px-3 text-xs font-bold text-white bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-800 hover:to-amber-950 rounded-lg shadow-sm transition-all"
+                  >
+                    👑 1-Click Admin Login
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFillDemo('admin@cafe.com', 'password123')}
+                    className="py-2 px-3 text-xs font-semibold text-amber-950 bg-white/80 hover:bg-white border border-amber-200 rounded-lg transition-colors"
+                  >
+                    Fill Form
+                  </button>
+                </div>
               </div>
             </form>
           </div>
