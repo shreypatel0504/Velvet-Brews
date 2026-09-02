@@ -35,6 +35,7 @@ const MenuItemCard = React.memo(({ item, quantity, onAddToCart, onUpdateQuantity
   const itemId = item._id || item.id || "";
   const fallbackImg = CATEGORY_FALLBACK_IMAGES[item.category || "Coffee"] || CATEGORY_FALLBACK_IMAGES.Coffee;
   const [imgLoaded, setImgLoaded] = React.useState(false);
+  const isHotBeverage = item.category === "Coffee" || item.category === "Tea";
 
   const handleImgError = React.useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     (e.target as HTMLImageElement).src = fallbackImg;
@@ -55,13 +56,16 @@ const MenuItemCard = React.memo(({ item, quantity, onAddToCart, onUpdateQuantity
             <div className="h-4 w-4 rounded-sm border-2 border-emerald-600 flex items-center justify-center p-0.5 shrink-0">
               <div className="h-2 w-2 rounded-full bg-emerald-600" />
             </div>
-            <span className="text-[10px] font-extrabold uppercase text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+            <span className="text-[10px] font-extrabold uppercase text-amber-100 gold-foil-badge px-2.5 py-0.5 rounded-md shadow-xs flex items-center gap-1">
               ★ {item.category || "Bestseller"}
             </span>
           </div>
 
-          <h3 className="font-heading text-base font-bold text-stone-900 leading-snug">
+          <h3 className="font-heading text-base font-bold text-stone-900 leading-snug flex items-center gap-1.5">
             {item.name}
+            {isHotBeverage && (
+              <span className="text-xs text-amber-600 animate-pulse" title="Served Piping Hot">☕</span>
+            )}
           </h3>
 
           <div className="flex items-baseline gap-2 mt-1 mb-1.5">
@@ -124,7 +128,11 @@ const MenuItemCard = React.memo(({ item, quantity, onAddToCart, onUpdateQuantity
       </div>
 
       {/* DESKTOP / TABLET CARD (Hidden on Mobile) */}
-      <Card className="hidden sm:flex h-full flex-col group cursor-pointer bg-white border border-stone-200/80 hover:border-[var(--color-cafe-primary)]/40 hover:shadow-lg transition-all duration-250">
+      <Card 
+        tilt={true}
+        spotlight={true}
+        className="hidden sm:flex h-full flex-col group cursor-pointer bg-white/95 border border-stone-200/90 hover:border-[var(--color-cafe-primary)]/50 hover:shadow-2xl transition-all duration-300"
+      >
         <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl bg-stone-100 cursor-pointer">
           {!imgLoaded && (
             <div className="absolute inset-0 bg-stone-200 animate-pulse" />
@@ -136,13 +144,22 @@ const MenuItemCard = React.memo(({ item, quantity, onAddToCart, onUpdateQuantity
             decoding="async"
             onLoad={handleImgLoad}
             onError={handleImgError}
-            className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-105 cursor-pointer ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-full h-full object-cover transition-all duration-400 group-hover:scale-108 cursor-pointer ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
           />
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors cursor-pointer" />
+          {/* Subtle Top Badge */}
+          <div className="absolute top-3 left-3 z-10">
+            <span className="gold-foil-badge text-amber-50 text-[11px] font-extrabold px-3 py-1 rounded-full shadow-md">
+              ★ {item.category}
+            </span>
+          </div>
+
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
         <div className="flex flex-col flex-1 p-5">
           <div className="flex items-start justify-between mb-2">
-            <h3 className="font-heading text-lg font-bold text-stone-900">{item.name}</h3>
+            <h3 className="font-heading text-lg font-bold text-stone-900 group-hover:text-[var(--color-cafe-primary)] transition-colors">
+              {item.name}
+            </h3>
             <span className="font-extrabold text-[var(--color-cafe-primary)] text-base">₹{item.price}</span>
           </div>
           <p className="text-sm text-stone-600 mb-6 flex-1 line-clamp-2">
@@ -150,9 +167,9 @@ const MenuItemCard = React.memo(({ item, quantity, onAddToCart, onUpdateQuantity
           </p>
           <Button 
             onClick={() => onAddToCart(item)}
-            className="w-full rounded-xl bg-stone-50 text-[var(--color-cafe-primary)] border border-[var(--color-cafe-primary)]/20 hover:bg-[var(--color-cafe-primary)] hover:text-white group-hover:border-transparent transition-all cursor-pointer font-bold"
+            className="w-full rounded-xl bg-stone-50 text-[var(--color-cafe-primary)] border border-[var(--color-cafe-primary)]/30 hover:bg-[var(--color-cafe-primary)] hover:text-white group-hover:border-transparent transition-all cursor-pointer font-bold shadow-xs hover:shadow-md"
           >
-            Add to Order
+            Add to Order +
           </Button>
         </div>
       </Card>

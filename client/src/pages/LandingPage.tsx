@@ -93,9 +93,9 @@ export const LandingPage = () => {
                   initial={{ opacity: 0, x: -50 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ type: "spring", stiffness: 120, damping: 14, delay: 0.25 }}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--color-cafe-primary)]/10 text-[var(--color-cafe-primary)] text-xs font-bold mb-6 shadow-xs"
+                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full gold-foil-badge text-amber-100 text-xs font-extrabold mb-6 shadow-md"
                 >
-                  <Sparkles className="h-4 w-4 text-amber-600" /> Surat's Premier Artisan Cafe
+                  <Sparkles className="h-4 w-4 text-amber-300 animate-spin-slow" /> Surat's Premier Artisan Cafe
                 </motion.div>
                 <motion.h1 
                   initial={{ opacity: 0, x: -60 }}
@@ -246,7 +246,7 @@ export const LandingPage = () => {
                   whileHover={{ y: -8 }}
                   viewport={{ once: true, amount: 0.05 }}
                   transition={{ type: "spring", stiffness: 120, damping: 14, delay: idx * 0.08 }}
-                  className="group relative overflow-hidden rounded-3xl bg-amber-950/10 border border-amber-900/10 shadow-md hover:shadow-2xl transition-all duration-500 h-[320px] sm:h-[360px] lg:h-[390px] flex flex-col justify-end"
+                  className="group relative overflow-hidden rounded-3xl bg-amber-950/10 border border-amber-900/10 shadow-md hover:shadow-2xl transition-all duration-500 h-[320px] sm:h-[360px] lg:h-[390px] flex flex-col justify-end spotlight-card"
                 >
                   {/* Image with zoom effect */}
                   <img
@@ -262,7 +262,7 @@ export const LandingPage = () => {
 
                   {/* Top Glassmorphic Tag */}
                   <div className="absolute top-4 left-4 z-10 pointer-events-none">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-amber-300 text-[11px] font-extrabold tracking-wider uppercase border border-white/20 shadow-md">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full gold-foil-badge text-amber-200 text-[11px] font-extrabold tracking-wider uppercase shadow-md">
                       {item.tag}
                     </span>
                   </div>
@@ -463,7 +463,11 @@ export const LandingPage = () => {
                   viewport={{ once: true, amount: 0.05 }}
                   transition={{ type: "spring", stiffness: 110, damping: 14, delay: idx * 0.1 }}
                 >
-                  <Card className="p-6 bg-[var(--color-cafe-background)] border-transparent hover:border-[var(--color-cafe-primary)]/30 shadow-xs hover:shadow-lg transition-all h-full flex flex-col justify-between cursor-pointer">
+                  <Card 
+                    tilt={true}
+                    spotlight={true}
+                    className="p-6 bg-white/90 border border-stone-200/80 hover:border-[var(--color-cafe-primary)]/40 shadow-sm hover:shadow-xl transition-all h-full flex flex-col justify-between cursor-pointer"
+                  >
                     <div>
                       <div className="flex items-center gap-1 text-amber-400 mb-3">
                         {[...Array(review.rating)].map((_, i) => (
@@ -479,7 +483,7 @@ export const LandingPage = () => {
                         <h4 className="font-bold text-xs text-[var(--color-cafe-text-primary)]">{review.name}</h4>
                         <span className="text-[10px] text-gray-400">{review.role}</span>
                       </div>
-                      <span className="text-[10px] font-bold bg-[var(--color-cafe-primary)]/10 text-[var(--color-cafe-primary)] px-2.5 py-1 rounded-full">
+                      <span className="text-[10px] font-extrabold gold-foil-badge text-amber-100 px-3 py-1 rounded-full shadow-xs">
                         {review.tag}
                       </span>
                     </div>

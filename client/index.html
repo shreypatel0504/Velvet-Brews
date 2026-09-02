@@ -13,7 +13,45 @@
     <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
     <link rel="dns-prefetch" href="https://images.unsplash.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <title>Velvet Brews | Surat's Premier Artisan Cafe</title>
+    <title>Velvet Brews | Surat's Premier Artisan Cafe & Dining</title>
+    <meta name="description" content="Experience Surat's premier artisan cafe. Handcrafted specialty coffees, wood-fired pizzas, sourdough treats, and 50 freshly made culinary delights in Vesu, Surat." />
+    <meta name="keywords" content="cafe surat, coffee shop vesu, artisan bakery, specialty coffee, velvet brews, dine in cafe surat" />
+    
+    <!-- Open Graph & Social Cards -->
+    <meta property="og:type" content="restaurant" />
+    <meta property="og:title" content="Velvet Brews | Surat's Premier Artisan Cafe" />
+    <meta property="og:description" content="Handcrafted specialty coffee, artisan bakery, and 50+ dishes in Vesu, Surat. Experience the perfect pour." />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1200&q=80" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Google LocalBusiness / Cafe JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "CafeOrCoffeeShop",
+      "name": "Velvet Brews",
+      "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24",
+      "telephone": "+919876543210",
+      "servesCuisine": ["Coffee", "Artisan Bakery", "Italian", "Cafe"],
+      "priceRange": "₹₹",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Vesu Main Road, Near University",
+        "addressLocality": "Surat",
+        "addressRegion": "Gujarat",
+        "postalCode": "395007",
+        "addressCountry": "IN"
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          "opens": "08:00",
+          "closes": "23:30"
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
