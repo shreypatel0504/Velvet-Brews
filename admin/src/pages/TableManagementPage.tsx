@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, QrCode, Plus, CheckCircle, X, Calendar, RefreshCw, Trash2, Filter, Clock, Phone, MapPin, Sparkles, MessageSquare } from "lucide-react";
+import { Users, QrCode, Plus, CheckCircle, X, Calendar, RefreshCw, Trash2, Filter, Clock, Phone, MapPin, Sparkles, MessageSquare, RotateCcw } from "lucide-react";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -80,6 +80,18 @@ export const TableManagementPage = () => {
     { id: 8, capacity: 2, status: 'free', time: null, orderTotal: null },
   ]);
 
+  const isDuplicateReservation = (a: any, b: any) => {
+    const idA = a._id || a.id;
+    const idB = b._id || b.id;
+    if (idA && idB && String(idA) === String(idB)) return true;
+    const norm = (t: string) => (t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const tableMatch = norm(a.tableNumber) === norm(b.tableNumber);
+    const dateMatch = a.date === b.date;
+    const slotMatch = a.timeSlot === b.timeSlot;
+    const nameMatch = (a.customerName || '').trim().toLowerCase() === (b.customerName || '').trim().toLowerCase();
+    return tableMatch && dateMatch && slotMatch && nameMatch;
+  };
+
   const fetchReservations = React.useCallback(async () => {
     try {
       const res = await fetch('/api/reservations');
@@ -87,11 +99,17 @@ export const TableManagementPage = () => {
       const apiRes = Array.isArray(data) ? data : [];
       const localRes = sharedSync.getReservations();
 
-      const merged: any[] = [...apiRes];
-      localRes.forEach(lr => {
-        const id = lr._id || lr.id;
-        if (id && !merged.some(m => (m._id === id || m.id === id))) {
-          merged.unshift(lr);
+      const merged: any[] = [];
+      // 1. Authoritative server reservations
+      apiRes.forEach((item) => {
+        if (!merged.some((m) => isDuplicateReservation(m, item))) {
+          merged.push(item);
+        }
+      });
+      // 2. Only add local entry if not already present
+      localRes.forEach((lr) => {
+        if (!merged.some((m) => isDuplicateReservation(m, lr))) {
+          merged.push(lr);
         }
       });
 
@@ -109,15 +127,14 @@ export const TableManagementPage = () => {
 
     // Live sync: when customer books table on website
     socket.on('new-reservation', (res: any) => {
-      playReservationChime();
-      setReservations(prev => {
-        const id = res._id || res.id;
-        if (id && prev.some(r => r._id === id || (r as any).id === id)) {
+      setReservations((prev) => {
+        if (prev.some((r) => isDuplicateReservation(r, res))) {
           return prev;
         }
+        playReservationChime();
+        toast.success(`📅 New Booking: ${res.tableNumber} for ${res.customerName} (${res.guests} guests)!`, { duration: 6000 });
         return [res, ...prev];
       });
-      toast.success(`📅 New Booking: ${res.tableNumber} for ${res.customerName} (${res.guests} guests)!`, { duration: 6000 });
     });
 
     socket.on('reservation-updated', (updated: any) => {
@@ -170,28 +187,44 @@ export const TableManagementPage = () => {
   };
 
   const updateReservationStatus = async (id: string, status: string) => {
+    setReservations(prev => prev.map(r => (r._id === id || (r as any).id === id) ? { ...r, status } : r));
+    socket.emit('reservation-updated', { _id: id, id, status });
+    sharedSync.updateReservationStatus(id, status);
+
     try {
-      await fetch(`http://localhost:5000/api/reservations/${id}/status`, {
+      await fetch(`/api/reservations/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
-      });
-      setReservations(prev => prev.map(r => r._id === id ? { ...r, status } : r));
-      toast.success(`Reservation status updated to: ${status.toUpperCase()}`);
+      }).catch(() => fetch(`http://localhost:5000/api/reservations/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      }));
     } catch {
-      toast.error("Update failed");
+      // Offline fallback already updated
+    }
+
+    if (status === 'completed') {
+      toast.success(`🎉 Reservation #${String(id).slice(-4)} marked COMPLETED! Table has been released and is now open for new bookings.`);
+    } else if (status === 'cancelled') {
+      toast.success(`Reservation cancelled. Table has been released.`);
+    } else {
+      toast.success(`Reservation status updated to: ${status.toUpperCase()}`);
     }
   };
 
   const handleDeleteReservation = async (id: string, name: string) => {
-    if (!confirm(`Delete reservation for "${name}"?`)) return;
+    if (!confirm(`Delete reservation for "${name}"? This will also release the table.`)) return;
+    setReservations(prev => prev.filter(r => r._id !== id && (r as any).id !== id));
+    socket.emit('reservation-deleted', { _id: id, id });
+    sharedSync.deleteReservation(id);
+
     try {
-      await fetch(`http://localhost:5000/api/reservations/${id}`, { method: 'DELETE' });
-      setReservations(prev => prev.filter(r => r._id !== id));
-      toast.success("Reservation deleted");
-    } catch {
-      toast.error("Delete failed");
-    }
+      await fetch(`/api/reservations/${id}`, { method: 'DELETE' })
+        .catch(() => fetch(`http://localhost:5000/api/reservations/${id}`, { method: 'DELETE' }));
+    } catch {}
+    toast.success("Reservation deleted & table released");
   };
 
   const toggleTableStatus = (id: number) => {
@@ -404,31 +437,55 @@ export const TableManagementPage = () => {
                   <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 flex-1">
                       {res.status === 'confirmed' && (
-                        <Button
-                          onClick={() => updateReservationStatus(res._id, 'seated')}
-                          className="w-full text-xs h-8 bg-emerald-600 hover:bg-emerald-700"
-                        >
-                          Seat Guests ✓
-                        </Button>
+                        <>
+                          <Button
+                            onClick={() => updateReservationStatus(res._id, 'seated')}
+                            className="flex-1 text-xs h-8 bg-emerald-600 hover:bg-emerald-700"
+                          >
+                            Seat Guests ✓
+                          </Button>
+                          <Button
+                            onClick={() => updateReservationStatus(res._id, 'completed')}
+                            variant="outline"
+                            className="flex-1 text-xs h-8 text-blue-700 border-blue-300 hover:bg-blue-50"
+                          >
+                            Mark Completed
+                          </Button>
+                        </>
                       )}
                       {res.status === 'seated' && (
                         <Button
                           onClick={() => updateReservationStatus(res._id, 'completed')}
-                          variant="outline"
-                          className="w-full text-xs h-8 text-blue-700 border-blue-300 hover:bg-blue-50"
+                          className="w-full text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white"
                         >
-                          Mark Completed
+                          ✓ Mark Completed (Release Table)
                         </Button>
                       )}
                       {res.status === 'completed' && (
-                        <span className="w-full text-center text-xs font-bold text-emerald-700 py-1.5 bg-emerald-50 rounded-lg">
-                          Completed ✓
-                        </span>
+                        <div className="w-full flex items-center justify-between bg-blue-50/70 border border-blue-200 px-2.5 py-1 rounded-lg">
+                          <span className="text-xs font-bold text-blue-800">
+                            Completed ✓ (Table Released)
+                          </span>
+                          <button
+                            onClick={() => updateReservationStatus(res._id, 'confirmed')}
+                            className="text-[11px] font-semibold text-blue-700 hover:underline flex items-center gap-1"
+                          >
+                            <RotateCcw className="h-3 w-3" /> Re-open
+                          </button>
+                        </div>
                       )}
                       {res.status === 'cancelled' && (
-                        <span className="w-full text-center text-xs font-bold text-red-600 py-1.5 bg-red-50 rounded-lg">
-                          Cancelled
-                        </span>
+                        <div className="w-full flex items-center justify-between bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg">
+                          <span className="text-xs font-bold text-red-700">
+                            Cancelled (Table Released)
+                          </span>
+                          <button
+                            onClick={() => updateReservationStatus(res._id, 'confirmed')}
+                            className="text-[11px] font-semibold text-red-700 hover:underline flex items-center gap-1"
+                          >
+                            <RotateCcw className="h-3 w-3" /> Re-open
+                          </button>
+                        </div>
                       )}
                     </div>
 

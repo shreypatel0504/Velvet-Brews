@@ -94,6 +94,9 @@ io.on('connection', (socket) => {
   socket.on('reservation-updated', (data) => {
     io.emit('reservation-updated', data);
   });
+  socket.on('reservation-deleted', (data) => {
+    io.emit('reservation-deleted', data);
+  });
 
   // Menu (admin changes → website refreshes live)
   socket.on('menu-updated', (data) => {

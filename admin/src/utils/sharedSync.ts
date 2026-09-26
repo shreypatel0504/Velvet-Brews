@@ -134,7 +134,30 @@ export const sharedSync = {
   getReservations: (): SharedReservation[] => {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.RESERVATIONS);
-      return data ? JSON.parse(data) : [];
+      const list: SharedReservation[] = data ? JSON.parse(data) : [];
+      const norm = (t: string) => (t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const unique: SharedReservation[] = [];
+
+      list.forEach((r) => {
+        const id = r._id || r.id;
+        const exists = unique.some((u) => {
+          const uId = u._id || u.id;
+          if (id && uId && id === uId) return true;
+          return (
+            norm(u.tableNumber) === norm(r.tableNumber) &&
+            u.date === r.date &&
+            u.timeSlot === r.timeSlot &&
+            (u.customerName || '').trim().toLowerCase() === (r.customerName || '').trim().toLowerCase()
+          );
+        });
+        if (!exists) unique.push(r);
+      });
+
+      // Silently sync deduplicated list back to localStorage if duplicates existed
+      if (unique.length !== list.length) {
+        localStorage.setItem(STORAGE_KEYS.RESERVATIONS, JSON.stringify(unique));
+      }
+      return unique;
     } catch {
       return [];
     }
@@ -143,7 +166,18 @@ export const sharedSync = {
     try {
       const existing = sharedSync.getReservations();
       const id = reservation._id || reservation.id;
-      const index = existing.findIndex(r => (r._id === id || r.id === id));
+      const norm = (t: string) => (t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      // Check both by ID AND by (table + date + timeSlot + customerName) to prevent duplicate entries
+      const index = existing.findIndex(
+        (r) =>
+          (id && (r._id === id || r.id === id)) ||
+          (norm(r.tableNumber) === norm(reservation.tableNumber) &&
+            r.date === reservation.date &&
+            r.timeSlot === reservation.timeSlot &&
+            (r.customerName || '').trim().toLowerCase() === (reservation.customerName || '').trim().toLowerCase())
+      );
+
       let updated;
       if (index >= 0) {
         existing[index] = { ...existing[index], ...reservation };
@@ -155,6 +189,31 @@ export const sharedSync = {
       broadcastChannel?.postMessage({ type: 'RESERVATION_UPDATED', reservation });
     } catch (e) {
       console.warn("sharedSync saveReservation error", e);
+    }
+  },
+  updateReservationStatus: (id: string, status: string) => {
+    try {
+      const existing = sharedSync.getReservations();
+      const updated = existing.map(r => {
+        if (r._id === id || r.id === id) {
+          return { ...r, status };
+        }
+        return r;
+      });
+      localStorage.setItem(STORAGE_KEYS.RESERVATIONS, JSON.stringify(updated));
+      broadcastChannel?.postMessage({ type: 'RESERVATION_STATUS_CHANGED', id, status });
+    } catch (e) {
+      console.warn("sharedSync updateReservationStatus error", e);
+    }
+  },
+  deleteReservation: (id: string) => {
+    try {
+      const existing = sharedSync.getReservations();
+      const updated = existing.filter(r => r._id !== id && r.id !== id);
+      localStorage.setItem(STORAGE_KEYS.RESERVATIONS, JSON.stringify(updated));
+      broadcastChannel?.postMessage({ type: 'RESERVATION_DELETED', id });
+    } catch (e) {
+      console.warn("sharedSync deleteReservation error", e);
     }
   },
 

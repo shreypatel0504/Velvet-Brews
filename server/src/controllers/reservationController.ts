@@ -36,22 +36,73 @@ const inMemoryReservations: any[] = [
   }
 ];
 
+// Helper to normalize table naming e.g. "Table 1 (Window Pair)" -> "Table 1"
+export const normalizeTableNumber = (val: string): string => {
+  if (!val) return '';
+  const match = val.match(/Table\s*\d+/i);
+  if (match) return match[0].replace(/\s+/g, ' ');
+  return val.trim();
+};
+
 export const createReservation = async (req: Request, res: Response) => {
   try {
     const { customerName, email, phone, guests, date, timeSlot, tableNumber, seatingArea, occasion, specialRequest } = req.body;
 
+    const targetTable = normalizeTableNumber(tableNumber || 'Table 1');
+    const targetDate = (date || new Date().toISOString().split('T')[0]).trim();
+    const targetSlot = (timeSlot || '07:30 PM').trim();
+
+    // 1. Conflict Check in MongoDB (Active statuses: confirmed, seated)
+    try {
+      const activeInDb = await Reservation.find({
+        date: targetDate,
+        timeSlot: targetSlot,
+        status: { $in: ['confirmed', 'seated'] }
+      });
+
+      const conflict = activeInDb.find(r => normalizeTableNumber(r.tableNumber) === targetTable);
+      if (conflict) {
+        return res.status(409).json({
+          message: `${targetTable} is already booked for ${targetDate} at ${targetSlot}. Please choose a different time slot or table.`,
+          conflict: true
+        });
+      }
+    } catch {
+      // MongoDB check skipped if disconnected
+    }
+
+    // 2. Conflict Check in In-Memory Store
+    const memConflict = inMemoryReservations.find(r =>
+      normalizeTableNumber(r.tableNumber) === targetTable &&
+      r.date === targetDate &&
+      r.timeSlot === targetSlot &&
+      (r.status === 'confirmed' || r.status === 'seated')
+    );
+
+    if (memConflict) {
+      return res.status(409).json({
+        message: `${targetTable} is already booked for ${targetDate} at ${targetSlot}. Please choose a different time slot or table.`,
+        conflict: true
+      });
+    }
+
+    const clientAssignedId = req.body._id || req.body.id;
+    const assignedId = clientAssignedId || ('RES' + Math.floor(1000 + Math.random() * 9000));
+
     const reservationData = {
+      _id: assignedId,
+      id: assignedId,
       customerName: customerName || 'Guest Customer',
       email: email || 'customer@example.com',
       phone: phone || '+91 98765 43210',
       guests: Number(guests) || 2,
-      date: date || new Date().toISOString().split('T')[0],
-      timeSlot: timeSlot || '07:00 PM',
-      tableNumber: tableNumber || 'Table 3',
+      date: targetDate,
+      timeSlot: targetSlot,
+      tableNumber: targetTable,
       seatingArea: seatingArea || 'Cozy Indoor Booth',
       occasion: occasion || 'Casual Coffee & Dining',
       specialRequest: specialRequest || '',
-      status: 'confirmed',
+      status: 'confirmed' as const,
       createdAt: new Date()
     };
 
@@ -63,20 +114,25 @@ export const createReservation = async (req: Request, res: Response) => {
       createdReservation = createdReservation.toObject();
     } catch {
       // In-memory fallback if MongoDB offline
-      createdReservation = {
-        _id: 'RES' + Math.floor(1000 + Math.random() * 9000),
-        ...reservationData
-      };
+      createdReservation = { ...reservationData };
     }
 
     const broadcastPayload = {
-      _id: createdReservation._id || ('RES' + Math.floor(1000 + Math.random() * 9000)),
-      id: createdReservation._id || ('RES' + Math.floor(1000 + Math.random() * 9000)),
-      ...reservationData
+      ...reservationData,
+      _id: createdReservation?._id ? String(createdReservation._id) : assignedId,
+      id: createdReservation?._id ? String(createdReservation._id) : assignedId,
     };
 
-    // Store in fallback memory list as well
-    const existingIndex = inMemoryReservations.findIndex(r => r._id === broadcastPayload._id);
+    // Store in fallback memory list without duplicates
+    const existingIndex = inMemoryReservations.findIndex(
+      (r) =>
+        (r._id === broadcastPayload._id || r.id === broadcastPayload.id) ||
+        (normalizeTableNumber(r.tableNumber) === targetTable &&
+          r.date === targetDate &&
+          r.timeSlot === targetSlot &&
+          (r.customerName || '').trim().toLowerCase() === (broadcastPayload.customerName || '').trim().toLowerCase())
+    );
+
     if (existingIndex >= 0) {
       inMemoryReservations[existingIndex] = broadcastPayload;
     } else {
@@ -97,12 +153,24 @@ export const getReservations = async (req: Request, res: Response) => {
   try {
     const reservations = await Reservation.find({}).sort({ createdAt: -1 });
     if (reservations && reservations.length > 0) {
-      return res.json(reservations);
+      const unique: any[] = [];
+      reservations.forEach((r) => {
+        const robj = (r as any).toObject ? (r as any).toObject() : r;
+        const exists = unique.some(
+          (u) =>
+            (u._id && robj._id && String(u._id) === String(robj._id)) ||
+            (normalizeTableNumber(u.tableNumber) === normalizeTableNumber(robj.tableNumber) &&
+              u.date === robj.date &&
+              u.timeSlot === robj.timeSlot &&
+              (u.customerName || '').trim().toLowerCase() === (robj.customerName || '').trim().toLowerCase())
+        );
+        if (!exists) unique.push(robj);
+      });
+      return res.json(unique);
     }
     // Return in-memory fallback if Mongo returns empty or offline
     res.json(inMemoryReservations);
   } catch (error: any) {
-    // If DB connection error, return in-memory store instead of failing with 500
     res.json(inMemoryReservations);
   }
 };
@@ -112,27 +180,35 @@ export const updateReservationStatus = async (req: Request, res: Response) => {
     const { status } = req.body;
     const { id } = req.params;
 
-    // Update in memory fallback
-    const memItem = inMemoryReservations.find(r => r._id === id || r.id === id);
-    if (memItem) {
-      memItem.status = status;
-    }
+    let updatedPayload: any = null;
 
     try {
       const reservation = await Reservation.findById(id);
       if (reservation) {
         reservation.status = status;
         const updated = await reservation.save();
-        io.emit('reservation-updated', updated);
-        return res.json(updated);
+        updatedPayload = updated.toObject();
       }
     } catch {
       // Ignore DB error and fallback to memory response
     }
 
-    const payload = memItem || { _id: id, id, status };
-    io.emit('reservation-updated', payload);
-    res.json(payload);
+    // Update in memory fallback
+    const memItem = inMemoryReservations.find(r => r._id === id || r.id === id);
+    if (memItem) {
+      memItem.status = status;
+      if (!updatedPayload) {
+        updatedPayload = { ...memItem };
+      }
+    }
+
+    if (!updatedPayload) {
+      updatedPayload = { _id: id, id, status };
+    }
+
+    // Broadcast status change to both customer website and admin portal
+    io.emit('reservation-updated', updatedPayload);
+    res.json(updatedPayload);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -154,7 +230,7 @@ export const deleteReservation = async (req: Request, res: Response) => {
       // Ignore DB error
     }
 
-    io.emit('reservation-deleted', { _id: id });
+    io.emit('reservation-deleted', { _id: id, id });
     res.json({ message: 'Reservation deleted', _id: id });
   } catch (error: any) {
     res.status(500).json({ message: error.message });

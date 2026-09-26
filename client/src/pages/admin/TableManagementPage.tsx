@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, QrCode, Plus, CheckCircle, X, Calendar } from "lucide-react";
+import { Users, QrCode, Plus, CheckCircle, X, Calendar, Trash2, CheckCircle2, RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { socket } from "@/utils/socket";
@@ -46,6 +46,18 @@ export const TableManagementPage = () => {
     { id: 8, capacity: 2, status: 'free', time: null, orderTotal: null },
   ]);
 
+  const isDuplicateReservation = (a: any, b: any) => {
+    const idA = a._id || a.id;
+    const idB = b._id || b.id;
+    if (idA && idB && String(idA) === String(idB)) return true;
+    const norm = (t: string) => (t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const tableMatch = norm(a.tableNumber) === norm(b.tableNumber);
+    const dateMatch = a.date === b.date;
+    const slotMatch = a.timeSlot === b.timeSlot;
+    const nameMatch = (a.customerName || '').trim().toLowerCase() === (b.customerName || '').trim().toLowerCase();
+    return tableMatch && dateMatch && slotMatch && nameMatch;
+  };
+
   const fetchReservations = React.useCallback(async () => {
     try {
       const res = await fetch('/api/reservations');
@@ -53,11 +65,15 @@ export const TableManagementPage = () => {
       const apiRes = Array.isArray(data) ? data : [];
       const localRes = sharedSync.getReservations();
 
-      const merged: any[] = [...apiRes];
-      localRes.forEach(lr => {
-        const id = lr._id || lr.id;
-        if (id && !merged.some(m => (m._id === id || m.id === id))) {
-          merged.unshift(lr);
+      const merged: any[] = [];
+      apiRes.forEach((item) => {
+        if (!merged.some((m) => isDuplicateReservation(m, item))) {
+          merged.push(item);
+        }
+      });
+      localRes.forEach((lr) => {
+        if (!merged.some((m) => isDuplicateReservation(m, lr))) {
+          merged.push(lr);
         }
       });
 
@@ -73,7 +89,7 @@ export const TableManagementPage = () => {
 
     socket.on('new-reservation', (res: any) => {
       const newRes: Reservation = {
-        _id: res._id || res.id || `RES-${Math.floor(1000 + Math.random() * 9000)}`,
+        _id: String(res._id || res.id || `RES-${Math.floor(1000 + Math.random() * 9000)}`),
         customerName: res.customerName || "Guest",
         phone: res.phone || "",
         email: res.email || "",
@@ -87,11 +103,11 @@ export const TableManagementPage = () => {
         status: res.status || "confirmed"
       };
 
-      setReservations(prev => {
-        if (prev.some(r => r._id === newRes._id)) return prev;
+      setReservations((prev) => {
+        if (prev.some((r) => isDuplicateReservation(r, newRes))) return prev;
+        toast.success(`🎉 New Table Reservation: ${newRes.tableNumber} (${newRes.customerName})!`, { duration: 5000 });
         return [newRes, ...prev];
       });
-      toast.success(`🎉 New Table Reservation: ${newRes.tableNumber} (${newRes.customerName})!`, { duration: 5000 });
     });
 
     socket.on('reservation-updated', (updated: any) => {
@@ -111,8 +127,8 @@ export const TableManagementPage = () => {
   }, [fetchReservations]);
 
   const toggleReservationStatus = async (id: string, nextStatus: string) => {
-    setReservations(prev => prev.map(r => r._id === id ? { ...r, status: nextStatus } : r));
-    socket.emit('reservation-updated', { _id: id, status: nextStatus });
+    setReservations(prev => prev.map(r => r._id === id || (r as any).id === id ? { ...r, status: nextStatus } : r));
+    socket.emit('reservation-updated', { _id: id, id, status: nextStatus });
 
     const localRes = sharedSync.getReservations();
     const target = localRes.find(r => r._id === id || r.id === id);
@@ -120,6 +136,7 @@ export const TableManagementPage = () => {
       target.status = nextStatus;
       sharedSync.saveReservation(target);
     }
+    sharedSync.updateReservationStatus(id, nextStatus);
 
     try {
       await fetch(`/api/reservations/${id}/status`, {
@@ -131,7 +148,25 @@ export const TableManagementPage = () => {
       // Storage and socket already updated
     }
 
-    toast.success(`Reservation #${id} marked as ${nextStatus}`);
+    if (nextStatus === 'completed') {
+      toast.success(`🎉 Reservation #${String(id).slice(-4)} marked COMPLETED! Table has been released and is now open for new bookings.`);
+    } else if (nextStatus === 'cancelled') {
+      toast.success(`Reservation cancelled. Table has been released.`);
+    } else {
+      toast.success(`Reservation status updated to: ${nextStatus.toUpperCase()}`);
+    }
+  };
+
+  const handleDeleteReservation = async (id: string, name: string) => {
+    if (!confirm(`Delete reservation for "${name}"? This will also release the table.`)) return;
+    setReservations(prev => prev.filter(r => r._id !== id && (r as any).id !== id));
+    socket.emit('reservation-deleted', { _id: id, id });
+    sharedSync.deleteReservation(id);
+
+    try {
+      await fetch(`/api/reservations/${id}`, { method: 'DELETE' });
+    } catch {}
+    toast.success("Reservation deleted & table released");
   };
 
   const toggleTableStatus = (id: number) => {
@@ -212,9 +247,11 @@ export const TableManagementPage = () => {
                   </div>
                   <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                     res.status === 'confirmed' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
-                    res.status === 'seated' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
+                    res.status === 'seated' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                    res.status === 'completed' ? 'bg-blue-50 text-blue-800 border border-blue-200' :
+                    'bg-red-50 text-red-700 border border-red-200'
                   }`}>
-                    {res.status}
+                    {res.status === 'completed' ? 'Completed (Table Free)' : res.status}
                   </span>
                 </div>
 
@@ -252,22 +289,77 @@ export const TableManagementPage = () => {
                   </div>
                 )}
 
-                <div className="flex gap-2 pt-2 border-t border-gray-100">
-                  {res.status === 'confirmed' && (
-                    <Button onClick={() => toggleReservationStatus(res._id, 'seated')} className="w-full text-xs h-9 bg-emerald-600 hover:bg-emerald-700">
-                      Seat Guests
-                    </Button>
-                  )}
-                  {res.status === 'seated' && (
-                    <Button onClick={() => toggleReservationStatus(res._id, 'completed')} variant="outline" className="w-full text-xs h-9">
-                      Mark Completed
-                    </Button>
-                  )}
-                  {res.status === 'completed' && (
-                    <span className="w-full text-center text-xs font-semibold text-emerald-600 py-1.5 bg-emerald-50 rounded-lg">
-                      Completed
-                    </span>
-                  )}
+                {/* Actions: Admin can Mark Completed to free table */}
+                <div className="space-y-2 pt-2 border-t border-gray-100">
+                  <div className="flex items-center gap-1.5">
+                    {res.status === 'confirmed' && (
+                      <>
+                        <Button
+                          onClick={() => toggleReservationStatus(res._id, 'seated')}
+                          className="flex-1 text-xs h-8 bg-emerald-600 hover:bg-emerald-700"
+                        >
+                          Seat Guests
+                        </Button>
+                        <Button
+                          onClick={() => toggleReservationStatus(res._id, 'completed')}
+                          variant="outline"
+                          className="flex-1 text-xs h-8 text-blue-700 border-blue-300 hover:bg-blue-50"
+                        >
+                          Mark Completed
+                        </Button>
+                      </>
+                    )}
+                    {res.status === 'seated' && (
+                      <Button
+                        onClick={() => toggleReservationStatus(res._id, 'completed')}
+                        className="w-full text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        ✓ Mark Completed (Release Table)
+                      </Button>
+                    )}
+                    {res.status === 'completed' && (
+                      <div className="w-full flex items-center justify-between bg-blue-50/70 border border-blue-200 px-3 py-1.5 rounded-lg">
+                        <span className="text-xs font-bold text-blue-800 flex items-center gap-1">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" /> Completed (Table Freed)
+                        </span>
+                        <button
+                          onClick={() => toggleReservationStatus(res._id, 'confirmed')}
+                          className="text-[11px] font-semibold text-blue-700 hover:underline flex items-center gap-1"
+                        >
+                          <RotateCcw className="h-3 w-3" /> Re-open
+                        </button>
+                      </div>
+                    )}
+                    {res.status === 'cancelled' && (
+                      <div className="w-full flex items-center justify-between bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg">
+                        <span className="text-xs font-bold text-red-700">Cancelled (Table Freed)</span>
+                        <button
+                          onClick={() => toggleReservationStatus(res._id, 'confirmed')}
+                          className="text-[11px] font-semibold text-red-700 hover:underline flex items-center gap-1"
+                        >
+                          <RotateCcw className="h-3 w-3" /> Re-open
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    {res.status !== 'cancelled' && res.status !== 'completed' && (
+                      <button
+                        onClick={() => toggleReservationStatus(res._id, 'cancelled')}
+                        className="text-red-500 hover:text-red-700 font-medium text-[11px] hover:underline"
+                      >
+                        Cancel Reservation
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteReservation(res._id, res.customerName)}
+                      className="ml-auto text-gray-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors"
+                      title="Delete Entry"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               </Card>
             ))}
