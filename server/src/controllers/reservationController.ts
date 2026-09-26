@@ -36,12 +36,20 @@ const inMemoryReservations: any[] = [
   }
 ];
 
-// Helper to normalize table naming e.g. "Table 1 (Window Pair)" -> "Table 1"
-export const normalizeTableNumber = (val: string): string => {
-  if (!val) return '';
-  const match = val.match(/Table\s*\d+/i);
-  if (match) return match[0].replace(/\s+/g, ' ');
-  return val.trim();
+// Helper to normalize table naming e.g. "Table 1 (Window Pair)", "table-1", "1", "T-1" -> "Table 1"
+export const normalizeTableNumber = (val: string | number): string => {
+  if (!val && val !== 0) return '';
+  const str = String(val).trim();
+  const match = str.match(/\d+/);
+  return match ? `Table ${match[0]}` : str;
+};
+
+export const normalizeDate = (d: string): string => {
+  return (d || '').split('T')[0].trim();
+};
+
+export const normalizeSlot = (s: string): string => {
+  return (s || '').toLowerCase().replace(/^0/, '').replace(/\s+/g, '');
 };
 
 export const createReservation = async (req: Request, res: Response) => {
@@ -49,22 +57,31 @@ export const createReservation = async (req: Request, res: Response) => {
     const { customerName, email, phone, guests, date, timeSlot, tableNumber, seatingArea, occasion, specialRequest } = req.body;
 
     const targetTable = normalizeTableNumber(tableNumber || 'Table 1');
-    const targetDate = (date || new Date().toISOString().split('T')[0]).trim();
+    const targetDate = normalizeDate(date || new Date().toISOString());
     const targetSlot = (timeSlot || '07:30 PM').trim();
+
+    const isConflict = (r: any) => {
+      const isTableSame = normalizeTableNumber(r.tableNumber) === targetTable;
+      const isDateSame = normalizeDate(r.date) === targetDate;
+      const isSlotSame = normalizeSlot(r.timeSlot) === normalizeSlot(targetSlot);
+      const isActive = r.status === 'confirmed' || r.status === 'seated';
+      return isActive && isTableSame && isDateSame && isSlotSame;
+    };
 
     // 1. Conflict Check in MongoDB (Active statuses: confirmed, seated)
     try {
       const activeInDb = await Reservation.find({
-        date: targetDate,
-        timeSlot: targetSlot,
         status: { $in: ['confirmed', 'seated'] }
       });
 
-      const conflict = activeInDb.find(r => normalizeTableNumber(r.tableNumber) === targetTable);
+      const conflict = activeInDb.find(isConflict);
       if (conflict) {
         return res.status(409).json({
-          message: `${targetTable} is already booked for ${targetDate} at ${targetSlot}. Please choose a different time slot or table.`,
-          conflict: true
+          message: `Yeh table yeh time pe book hai! ${targetTable} is already booked for ${targetDate} at ${targetSlot}.`,
+          conflict: true,
+          tableNumber: targetTable,
+          date: targetDate,
+          timeSlot: targetSlot
         });
       }
     } catch {
@@ -72,17 +89,15 @@ export const createReservation = async (req: Request, res: Response) => {
     }
 
     // 2. Conflict Check in In-Memory Store
-    const memConflict = inMemoryReservations.find(r =>
-      normalizeTableNumber(r.tableNumber) === targetTable &&
-      r.date === targetDate &&
-      r.timeSlot === targetSlot &&
-      (r.status === 'confirmed' || r.status === 'seated')
-    );
+    const memConflict = inMemoryReservations.find(isConflict);
 
     if (memConflict) {
       return res.status(409).json({
-        message: `${targetTable} is already booked for ${targetDate} at ${targetSlot}. Please choose a different time slot or table.`,
-        conflict: true
+        message: `Yeh table yeh time pe book hai! ${targetTable} is already booked for ${targetDate} at ${targetSlot}.`,
+        conflict: true,
+        tableNumber: targetTable,
+        date: targetDate,
+        timeSlot: targetSlot
       });
     }
 

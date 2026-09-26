@@ -16,7 +16,8 @@ import {
   User,
   Lock,
   AlertCircle,
-  X
+  X,
+  AlertTriangle
 } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
 import { Card, Button, Input } from "@/components/ui";
@@ -106,6 +107,22 @@ const OCCASIONS = [
   { label: "Business Meeting", icon: Briefcase }
 ];
 
+// Universal normalizers to guarantee zero mismatch between any input formats
+export const normalizeTableNumber = (val: string | number): string => {
+  if (!val && val !== 0) return '';
+  const str = String(val).trim();
+  const match = str.match(/\d+/);
+  return match ? `Table ${match[0]}` : str;
+};
+
+export const normalizeDate = (d: string): string => {
+  return (d || '').split('T')[0].trim();
+};
+
+export const normalizeSlot = (s: string): string => {
+  return (s || '').toLowerCase().replace(/^0/, '').replace(/\s+/g, '');
+};
+
 export const TableReservationPage = () => {
   const authUser = useAuthStore((s) => s.user);
   const [selectedTable, setSelectedTable] = React.useState<SeatingOption>(SEATING_AREAS[0]);
@@ -122,12 +139,12 @@ export const TableReservationPage = () => {
   const [email, setEmail] = React.useState(authUser?.email || "");
   const [phone, setPhone] = React.useState("");
 
-  // Realtime reservations store
-  const [reservations, setReservations] = React.useState<any[]>([]);
+  // Realtime reservations store — initialize with shared storage instantly (0 delay)
+  const [reservations, setReservations] = React.useState<any[]>(() => sharedSync.getReservations());
   const [isLoading, setIsLoading] = React.useState(false);
   const [confirmedReservation, setConfirmedReservation] = React.useState<any>(null);
 
-  // Modal State for "Table Already Booked" Notification Popup
+  // POPUP NOTIFICATION MODAL STATE: "Yeh Table Yeh Time Pe Book Hai"
   const [bookedNoticeModal, setBookedNoticeModal] = React.useState<{
     isOpen: boolean;
     table: SeatingOption | null;
@@ -147,27 +164,18 @@ export const TableReservationPage = () => {
     }
   }, [authUser]);
 
-  // Normalize table number string (e.g., "Table 1 (Window Pair)" -> "Table 1")
-  const normalizeTableNumber = (val: string): string => {
-    if (!val) return '';
-    const match = val.match(/Table\s*\d+/i);
-    if (match) return match[0].replace(/\s+/g, ' ');
-    return val.trim();
-  };
-
   const isDuplicateReservation = (a: any, b: any) => {
     const idA = a._id || a.id;
     const idB = b._id || b.id;
     if (idA && idB && String(idA) === String(idB)) return true;
-    const norm = (t: string) => (t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const tableMatch = norm(a.tableNumber) === norm(b.tableNumber);
-    const dateMatch = a.date === b.date;
-    const slotMatch = a.timeSlot === b.timeSlot;
+    const tableMatch = normalizeTableNumber(a.tableNumber) === normalizeTableNumber(b.tableNumber);
+    const dateMatch = normalizeDate(a.date) === normalizeDate(b.date);
+    const slotMatch = normalizeSlot(a.timeSlot) === normalizeSlot(b.timeSlot);
     const nameMatch = (a.customerName || '').trim().toLowerCase() === (b.customerName || '').trim().toLowerCase();
     return tableMatch && dateMatch && slotMatch && nameMatch;
   };
 
-  // Fetch reservations from server & local shared sync with strict deduplication
+  // Fetch reservations from server & local storage with strict deduplication
   const fetchReservations = React.useCallback(async () => {
     try {
       const res = await fetch('/api/reservations');
@@ -205,12 +213,22 @@ export const TableReservationPage = () => {
         return [newRes, ...prev];
       });
 
-      // If the newly booked table is the one the user currently selected
+      // If the newly booked table matches the customer's selected table, date, and slot
       const currentSelectedNorm = normalizeTableNumber(selectedTable.name);
       const incomingTableNorm = normalizeTableNumber(newRes.tableNumber);
-      if (incomingTableNorm === currentSelectedNorm && newRes.date === reservationDate && newRes.timeSlot === timeSlot) {
+      if (
+        incomingTableNorm === currentSelectedNorm &&
+        normalizeDate(newRes.date) === normalizeDate(reservationDate) &&
+        normalizeSlot(newRes.timeSlot) === normalizeSlot(timeSlot)
+      ) {
+        setBookedNoticeModal({
+          isOpen: true,
+          table: selectedTable,
+          slot: timeSlot,
+          date: reservationDate
+        });
         toast.error(
-          `⚠️ Notification: ${selectedTable.name.split(' (')[0]} abhi kisi aur ne book kar li (${timeSlot})! Kripya doosra table ya slot chunein.`,
+          `⚠️ Alert: ${selectedTable.name.split(' (')[0]} abhi kisi aur ne book kar li (${timeSlot})!`,
           { duration: 6000, id: 'realtime-booked-alert' }
         );
       }
@@ -229,9 +247,13 @@ export const TableReservationPage = () => {
       if (updated.status === 'completed') {
         const currentSelectedNorm = normalizeTableNumber(selectedTable.name);
         const updatedTableNorm = normalizeTableNumber(updated.tableNumber);
-        if (updatedTableNorm === currentSelectedNorm && updated.date === reservationDate && updated.timeSlot === timeSlot) {
+        if (
+          updatedTableNorm === currentSelectedNorm &&
+          normalizeDate(updated.date) === normalizeDate(reservationDate) &&
+          normalizeSlot(updated.timeSlot) === normalizeSlot(timeSlot)
+        ) {
           toast.success(
-            `🎉 Notification: ${selectedTable.name.split(' (')[0]} ko Admin ne complete kar diya! Yeh table ab (${timeSlot}) ke liye open ho gayi hai.`,
+            `🎉 Alert: ${selectedTable.name.split(' (')[0]} ko Admin ne complete kar diya! Yeh table ab open ho gayi hai.`,
             { duration: 6000, id: 'realtime-released-alert' }
           );
         }
@@ -263,12 +285,15 @@ export const TableReservationPage = () => {
   // If admin marked it 'completed' or 'cancelled', the table is immediately RELEASED and OPEN!
   const getTableBookingInfo = (tableNameOrId: string, checkDate = reservationDate, checkSlot = timeSlot) => {
     const norm = normalizeTableNumber(tableNameOrId);
+    const targetD = normalizeDate(checkDate);
+    const targetS = normalizeSlot(checkSlot);
+
     const activeRes = reservations.find((r) => {
       const rNorm = normalizeTableNumber(r.tableNumber || '');
-      const rDate = r.date;
-      const rSlot = r.timeSlot;
+      const rDate = normalizeDate(r.date);
+      const rSlot = normalizeSlot(r.timeSlot);
       const isActive = r.status === 'confirmed' || r.status === 'seated';
-      return isActive && rNorm === norm && rDate === checkDate && rSlot === checkSlot;
+      return isActive && rNorm === norm && rDate === targetD && rSlot === targetS;
     });
 
     return {
@@ -287,18 +312,32 @@ export const TableReservationPage = () => {
     (t) => getTableBookingInfo(t.name, reservationDate, timeSlot).isBooked
   );
 
-  // Trigger Notification Modal when customer clicks on any booked table
-  const showBookedNotification = (table: SeatingOption, slot = timeSlot, date = reservationDate) => {
+  // Trigger Notification Modal whenever a user tries to interact with or book a booked table
+  const showBookedPopup = (table: SeatingOption, slot = timeSlot, date = reservationDate) => {
     setBookedNoticeModal({
       isOpen: true,
       table,
       slot,
       date
     });
-    toast.error(
-      `⚠️ Notification: ${table.name.split(' (')[0]} iss time (${slot}) ke liye already booked hai!`,
-      { id: `notice-toast-${table.id}`, duration: 4000 }
-    );
+  };
+
+  // Handlers for selection
+  const handleTableClick = (table: SeatingOption) => {
+    const info = getTableBookingInfo(table.name, reservationDate, timeSlot);
+    if (info.isBooked) {
+      showBookedPopup(table, timeSlot, reservationDate);
+      return;
+    }
+    setSelectedTable(table);
+  };
+
+  const handleTimeSlotClick = (slot: string) => {
+    setTimeSlot(slot);
+    const info = getTableBookingInfo(selectedTable.name, reservationDate, slot);
+    if (info.isBooked) {
+      showBookedPopup(selectedTable, slot, reservationDate);
+    }
   };
 
   const handleBookTable = async (e: React.FormEvent) => {
@@ -308,17 +347,17 @@ export const TableReservationPage = () => {
       return;
     }
 
-    // Availability validation before submission
+    // Availability check before submission — show popup if booked!
     const check = getTableBookingInfo(selectedTable.name, reservationDate, timeSlot);
     if (check.isBooked) {
-      showBookedNotification(selectedTable, timeSlot, reservationDate);
+      showBookedPopup(selectedTable, timeSlot, reservationDate);
       return;
     }
 
     setIsLoading(true);
 
     const generatedId = "RES-" + Math.floor(1000 + Math.random() * 9000);
-    const targetTableNum = selectedTable.name.split(' (')[0];
+    const targetTableNum = normalizeTableNumber(selectedTable.name);
 
     const payload = {
       _id: generatedId,
@@ -327,7 +366,7 @@ export const TableReservationPage = () => {
       email,
       phone,
       guests: Number(guestsCount),
-      date: reservationDate,
+      date: normalizeDate(reservationDate),
       timeSlot,
       tableNumber: targetTableNum,
       seatingArea: selectedTable.area,
@@ -350,9 +389,7 @@ export const TableReservationPage = () => {
       });
 
       if (res.status === 409) {
-        const conflictRes = await res.json();
-        showBookedNotification(selectedTable, timeSlot, reservationDate);
-        toast.error(`⛔ ${conflictRes.message || "This table is already booked for this slot!"}`);
+        showBookedPopup(selectedTable, timeSlot, reservationDate);
         fetchReservations();
         setIsLoading(false);
         return;
@@ -367,17 +404,16 @@ export const TableReservationPage = () => {
       console.warn("Server POST /api/reservations failed, using shared local storage fallback");
     }
 
-    // Update shared storage (deduplicated)
+    // Save to shared sync (deduplicated)
     sharedSync.saveReservation(finalData);
     trackWebsiteActivity('reservation_place', customerName, `Booked ${payload.tableNumber} for ${payload.guests} guests on ${payload.date} (${payload.timeSlot})`);
 
-    // IMPORTANT: If server POST succeeded, the server ALREADY broadcasted 'new-reservation'!
-    // Only emit from client socket if server was unreachable (offline mode) to prevent duplicate entries!
+    // Only emit from client if server POST was unreachable (offline mode)
     if (!serverSuccess) {
       socket.emit("new-reservation", finalData);
     }
 
-    // Update local state without creating duplicate entries
+    // Deduplicate when updating local state
     setReservations(prev => {
       if (prev.some(r => isDuplicateReservation(r, finalData))) return prev;
       return [finalData, ...prev];
@@ -392,65 +428,66 @@ export const TableReservationPage = () => {
     <div className="min-h-screen bg-[var(--color-cafe-background)] flex flex-col">
       <Navbar />
 
-      {/* POPUP NOTIFICATION MODAL: TABLE ALREADY BOOKED */}
+      {/* POPUP NOTIFICATION MODAL: YEH TABLE YEH TIME PE BOOK HAI */}
       <AnimatePresence>
         {bookedNoticeModal.isOpen && bookedNoticeModal.table && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              initial={{ opacity: 0, scale: 0.92, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-7 border-2 border-rose-200 relative overflow-hidden"
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 border-4 border-rose-400 relative overflow-hidden"
             >
-              {/* Glow background accent */}
-              <div className="absolute -top-12 -right-12 w-36 h-36 bg-rose-500/10 rounded-full blur-2xl pointer-events-none" />
+              {/* Pulsing red accent glow */}
+              <div className="absolute -top-16 -right-16 w-44 h-44 bg-rose-500/20 rounded-full blur-3xl pointer-events-none" />
 
-              {/* Header Badge & Close */}
+              {/* Header Badge & Close Button */}
               <div className="flex items-center justify-between pb-3 border-b border-rose-100 mb-4">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold border border-rose-200">
-                  <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
-                  ⚠️ NOTIFICATION: TABLE ALREADY BOOKED
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-100 text-rose-800 text-xs font-black uppercase tracking-wider border border-rose-300 shadow-xs">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
+                  🚨 TABLE ALREADY BOOKED
                 </span>
                 <button
                   type="button"
                   onClick={() => setBookedNoticeModal({ ...bookedNoticeModal, isOpen: false })}
-                  className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                  className="p-1.5 rounded-full text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
-              {/* Main Heading */}
+              {/* Main Headline */}
               <div className="text-center mb-5">
-                <div className="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
-                  <Lock className="h-7 w-7" />
+                <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner border border-rose-200">
+                  <Lock className="h-8 w-8" />
                 </div>
-                <h2 className="font-heading text-xl sm:text-2xl font-bold text-gray-900 leading-snug">
-                  Yeh Table Iss Time Pe Already Book Hai!
+                <h2 className="font-heading text-2xl sm:text-3xl font-black text-rose-950 leading-tight">
+                  Yeh Table Yeh Time Pe Book Hai!
                 </h2>
-                <p className="text-xs text-rose-700 font-medium mt-1">
-                  Table is not available for {bookedNoticeModal.slot} on {bookedNoticeModal.date}
+                <p className="text-sm font-semibold text-rose-700 mt-1">
+                  Table Already Reserved For This Time Slot
                 </p>
               </div>
 
               {/* Conflict Details Card */}
-              <div className="bg-rose-50/90 rounded-2xl p-4 border border-rose-200/80 mb-5 space-y-2 text-xs">
+              <div className="bg-rose-50 rounded-2xl p-4 border border-rose-200 mb-5 space-y-2.5 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600 font-medium">Reserved Table:</span>
-                  <span className="font-bold text-rose-950 text-sm">{bookedNoticeModal.table.name}</span>
+                  <span className="text-gray-600 font-semibold">Booked Table:</span>
+                  <span className="font-bold text-rose-900 text-sm">{bookedNoticeModal.table.name}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600 font-medium">Date & Time Slot:</span>
-                  <span className="font-bold text-gray-900">{bookedNoticeModal.date} @ {bookedNoticeModal.slot}</span>
+                  <span className="text-gray-600 font-semibold">Date & Time:</span>
+                  <span className="font-bold text-gray-900 text-sm">{bookedNoticeModal.date} @ {bookedNoticeModal.slot}</span>
                 </div>
-                <div className="flex items-center justify-between border-t border-rose-200/60 pt-1.5">
-                  <span className="text-gray-600 font-medium">Availability Status:</span>
-                  <span className="font-bold text-rose-700 flex items-center gap-1">
-                    <Lock className="h-3 w-3" /> Booked / Uplabdh Nahi Hai
+                <div className="flex items-center justify-between border-t border-rose-200 pt-2">
+                  <span className="text-gray-600 font-semibold">Status:</span>
+                  <span className="font-black text-rose-700 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-600" />
+                    Booked by Another Customer (Uplabdh Nahi Hai)
                   </span>
                 </div>
-                <p className="text-[11px] text-rose-800 pt-1 leading-relaxed">
-                  Aap yeh table <strong>{bookedNoticeModal.slot}</strong> ke liye book nahi kar sakte kyunki yeh pehle se reserved hai. Kripya neeche diye gaye open time slots ya doosre available tables mein se select karein:
+                <p className="text-[11px] text-rose-900 pt-1 leading-relaxed bg-white/70 p-2.5 rounded-xl border border-rose-200/60">
+                  ⚠️ <strong>Aap yeh table {bookedNoticeModal.slot} ke liye book nahi kar sakte</strong> kyunki yeh pehle se kisi aur guest ke liye reserved hai. Kripya neeche diye gaye open time slots ya doosre available tables mein se select karein:
                 </p>
               </div>
 
@@ -460,7 +497,7 @@ export const TableReservationPage = () => {
                 <div>
                   <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5 mb-2">
                     <Clock className="h-3.5 w-3.5 text-[var(--color-cafe-primary)]" />
-                    Isi Table ({bookedNoticeModal.table.name.split(' (')[0]}) Ke Liye Doosre Open Time Slots:
+                    Isi Table ({bookedNoticeModal.table.name.split(' (')[0]}) Ke Doosre Open Time Slots:
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {TIME_SLOTS.map(slot => {
@@ -489,7 +526,7 @@ export const TableReservationPage = () => {
                   )}
                 </div>
 
-                {/* 2. Alternate Available Tables for THIS time slot */}
+                {/* 2. Alternate Available Tables at THIS slot */}
                 <div>
                   <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5 mb-2">
                     <MapPin className="h-3.5 w-3.5 text-emerald-600" />
@@ -515,13 +552,13 @@ export const TableReservationPage = () => {
                 </div>
               </div>
 
-              {/* Action Close */}
+              {/* Modal Action Close */}
               <div className="pt-2 border-t border-gray-100">
                 <Button
                   onClick={() => setBookedNoticeModal({ ...bookedNoticeModal, isOpen: false })}
-                  className="w-full text-xs font-bold py-2.5 rounded-xl"
+                  className="w-full text-xs font-bold py-3 rounded-xl bg-gray-900 hover:bg-black text-white"
                 >
-                  Theek Hai, Samjh Gaya (Understood)
+                  Theek Hai, Samjh Gaya (Close)
                 </Button>
               </div>
             </motion.div>
@@ -688,7 +725,7 @@ export const TableReservationPage = () => {
                           <button
                             key={slot}
                             type="button"
-                            onClick={() => setTimeSlot(slot)}
+                            onClick={() => handleTimeSlotClick(slot)}
                             className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all border flex flex-col items-center justify-center relative ${
                               isSlotSelected
                                 ? "bg-[var(--color-cafe-primary)] text-white border-transparent shadow-md"
@@ -715,18 +752,18 @@ export const TableReservationPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 shadow-sm flex items-start gap-3 text-rose-900"
                   >
-                    <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+                    <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
                     <div className="flex-1 text-xs">
                       <div className="flex items-center justify-between">
-                        <p className="font-bold text-sm text-rose-900">
+                        <p className="font-bold text-sm text-rose-950">
                           ⛔ NOTIFICATION: {selectedTable.name.split(' (')[0]} iss time ({timeSlot}) ke liye booked hai!
                         </p>
                         <button
                           type="button"
-                          onClick={() => showBookedNotification(selectedTable, timeSlot, reservationDate)}
-                          className="text-[11px] font-bold text-rose-700 underline hover:text-rose-900"
+                          onClick={() => showBookedPopup(selectedTable, timeSlot, reservationDate)}
+                          className="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[11px] font-bold hover:bg-rose-700 transition-colors shadow-xs"
                         >
-                          View Details & Options
+                          View Popup Notice
                         </button>
                       </div>
                       <p className="text-rose-700 mt-1 leading-relaxed">
@@ -795,13 +832,7 @@ export const TableReservationPage = () => {
                           <button
                             key={table.id}
                             type="button"
-                            onClick={() => {
-                              if (isBooked) {
-                                showBookedNotification(table, timeSlot, reservationDate);
-                                return;
-                              }
-                              setSelectedTable(table);
-                            }}
+                            onClick={() => handleTableClick(table)}
                             className={`p-3 rounded-xl border flex flex-col items-center justify-center transition-all relative ${
                               isBooked
                                 ? "bg-rose-50/90 text-rose-800 border-rose-300 hover:border-rose-400 cursor-pointer"
@@ -841,13 +872,7 @@ export const TableReservationPage = () => {
                       return (
                         <div
                           key={table.id}
-                          onClick={() => {
-                            if (isBooked) {
-                              showBookedNotification(table, timeSlot, reservationDate);
-                              return;
-                            }
-                            setSelectedTable(table);
-                          }}
+                          onClick={() => handleTableClick(table)}
                           className={`rounded-2xl border-2 overflow-hidden transition-all duration-200 group relative ${
                             isBooked
                               ? "border-rose-300 bg-rose-50/20 cursor-pointer"
@@ -902,8 +927,8 @@ export const TableReservationPage = () => {
                                   <Lock className="h-3 w-3 shrink-0" />
                                   <span>Booked for {timeSlot}.</span>
                                 </div>
-                                <span className="text-[10px] underline font-bold cursor-pointer text-rose-800">
-                                  Tap for Options
+                                <span className="text-[10px] underline font-bold text-rose-800">
+                                  Click for Popup
                                 </span>
                               </div>
                             ) : (
@@ -951,10 +976,10 @@ export const TableReservationPage = () => {
                       {isCurrentTableBooked ? (
                         <button
                           type="button"
-                          onClick={() => showBookedNotification(selectedTable, timeSlot, reservationDate)}
+                          onClick={() => showBookedPopup(selectedTable, timeSlot, reservationDate)}
                           className="font-bold text-rose-600 flex items-center gap-1 hover:underline"
                         >
-                          <Lock className="h-3.5 w-3.5" /> Booked for this slot (Tap for Options)
+                          <Lock className="h-3.5 w-3.5" /> Booked for this slot (View Popup)
                         </button>
                       ) : (
                         <span className="font-bold text-emerald-600 flex items-center gap-1">
@@ -1045,15 +1070,15 @@ export const TableReservationPage = () => {
                         </div>
                         <button
                           type="button"
-                          onClick={() => showBookedNotification(selectedTable, timeSlot, reservationDate)}
+                          onClick={() => showBookedPopup(selectedTable, timeSlot, reservationDate)}
                           className="text-[10px] font-bold text-rose-800 underline shrink-0"
                         >
-                          Options
+                          View Popup
                         </button>
                       </div>
                       <Button
                         type="button"
-                        onClick={() => showBookedNotification(selectedTable, timeSlot, reservationDate)}
+                        onClick={() => showBookedPopup(selectedTable, timeSlot, reservationDate)}
                         className="w-full h-14 text-sm font-bold bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-xl gap-2 shadow-none border border-rose-300"
                       >
                         <Lock className="h-4 w-4 text-rose-600" /> Yeh Table Book Hai (Click to Change)

@@ -50,12 +50,18 @@ export const TableManagementPage = () => {
     const idA = a._id || a.id;
     const idB = b._id || b.id;
     if (idA && idB && String(idA) === String(idB)) return true;
-    const norm = (t: string) => (t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const tableMatch = norm(a.tableNumber) === norm(b.tableNumber);
-    const dateMatch = a.date === b.date;
-    const slotMatch = a.timeSlot === b.timeSlot;
+    const normTable = (t: string) => {
+      const match = String(t || '').match(/\d+/);
+      return match ? `Table ${match[0]}` : String(t || '').trim().toLowerCase();
+    };
+    const normDate = (d: string) => (d || '').split('T')[0].trim();
+    const normSlot = (s: string) => (s || '').toLowerCase().replace(/^0/, '').replace(/\s+/g, '');
+
+    const tableMatch = normTable(a.tableNumber) === normTable(b.tableNumber);
+    const dateMatch = normDate(a.date) === normDate(b.date);
+    const slotMatch = normSlot(a.timeSlot) === normSlot(b.timeSlot);
     const nameMatch = (a.customerName || '').trim().toLowerCase() === (b.customerName || '').trim().toLowerCase();
-    return tableMatch && dateMatch && slotMatch && nameMatch;
+    return (tableMatch && dateMatch && slotMatch && nameMatch) || (tableMatch && dateMatch && slotMatch);
   };
 
   const fetchReservations = React.useCallback(async () => {
